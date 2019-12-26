@@ -18,10 +18,9 @@ class UpdateTask extends Component {
   }
 
   componentDidMount = async () => {
-    const result = await this.state.contract.methods.tasks(this.state.task_id).call();
-    const task_exists = result.id == this.state.task_id; // if the id do not correspond, the task does not exists
+    const task = await this.state.contract.methods.tasks(this.state.task_id).call();
+    const task_exists = task.id == this.state.task_id; // if the id do not correspond, the task does not exists
     this.setState({ task_exists });
-    // this.setState({ task_id: this.props.router.query.id });
   }
 
   handleChange(event) {

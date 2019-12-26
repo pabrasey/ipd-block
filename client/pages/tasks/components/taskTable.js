@@ -1,19 +1,8 @@
 import React, { Component } from "react";
-import { Table, EthAddress } from 'rimble-ui';
+import { Table } from 'rimble-ui';
+import { AddressList } from '../../../components/ethereum';
 import Link from 'next/link';
 
-class AddressList extends React.Component {
-  render() {
-    const addresses = this.props.addresses;
-
-    let list = [];
-    addresses.forEach((address, index) => {
-      list.push(<EthAddress address = {address} key = {index} />);
-    });
-
-    return list;
-  }
-}
 
 class TaskRow extends React.Component {
   render() {
@@ -23,7 +12,7 @@ class TaskRow extends React.Component {
       <tr>
         <td>{ task.id }</td>
         <td>
-          <Link href={"/tasks/update/".concat(task.id)} >
+          <Link href={"/tasks/".concat(task.id)} >
             { task.title }
           </Link>
         </td>

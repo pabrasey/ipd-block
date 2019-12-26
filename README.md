@@ -78,3 +78,4 @@ We highly recommend using `truffle develop` over `testrpc`, but if you want to u
    ```
    testrpc --gasLimit 6721975 --gasPrice 100000000000
    ```
+# ipd-block

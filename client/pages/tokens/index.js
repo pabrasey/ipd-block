@@ -30,7 +30,7 @@ class Tasks extends React.Component {
     render () {
         return(
             <Layout>
-                <Heading as={"h1"} textAlign={'center'} >IPD Tokens</Heading>
+                <Heading as={"h1"} textAlign={'center'}>IPD Tokens</Heading>
                 <BalanceTable balances = { this.state.ppc_balances } />
             </Layout>
         )
