@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from 'rimble-ui';
 
 const linkStyle = {
   marginRight: 15
@@ -6,15 +6,9 @@ const linkStyle = {
 
 const Header = () => (
   <div>
-    <Link href="/">
-      <a style={linkStyle}>Home</a>
-    </Link>
-    <Link href="/tasks">
-      <a style={linkStyle}>Tasks</a>
-    </Link>
-    <Link href="/tokens">
-      <a style={linkStyle}>Tokens</a>
-    </Link>
+    <Link href="/"> Home </Link>
+    <Link href="/tasks" ml={3}> Tasks </Link>
+    <Link href="/tokens" ml={3}> Tokens </Link>
   </div>
 );
 

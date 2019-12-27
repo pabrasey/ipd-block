@@ -1,7 +1,6 @@
 import React, { Component } from "react";
-import { Table } from 'rimble-ui';
+import { Table, Link } from 'rimble-ui';
 import { AddressList } from '../../../components/ethereum';
-import Link from 'next/link';
 
 
 class TaskRow extends React.Component {
@@ -12,8 +11,9 @@ class TaskRow extends React.Component {
       <tr>
         <td>{ task.id }</td>
         <td>
+
           <Link href={"/tasks/".concat(task.id)}>
-            <a>{ task.title }</a>
+            { task.title }
           </Link>
         </td>
         <td><AddressList addresses = { task.validators } /></td>

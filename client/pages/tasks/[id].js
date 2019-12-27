@@ -12,8 +12,7 @@ class TaskInfo extends Component {
     render () {
         return (
             <div>
-              <Text>{this.props.info}: </Text>
-              <Text>{this.props.content}</Text>
+              <Text><strong>{this.props.info}:</strong> {this.props.content}</Text>
             </div>
         )
     }

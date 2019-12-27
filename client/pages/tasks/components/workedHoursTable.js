@@ -6,7 +6,7 @@ class Row extends React.Component {
       return (
         <tr>
           <td><EthAddress address = { this.props.work.worker } /></td>
-          <td>{ this.props.work.hours }</td>
+          <td><strong fontSize={15}>{ this.props.work.hours }</strong></td>
         </tr>
       );
     }
