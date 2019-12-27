@@ -12,8 +12,8 @@ class TaskRow extends React.Component {
       <tr>
         <td>{ task.id }</td>
         <td>
-          <Link href={"/tasks/".concat(task.id)} >
-            { task.title }
+          <Link href={"/tasks/".concat(task.id)}>
+            <a>{ task.title }</a>
           </Link>
         </td>
         <td><AddressList addresses = { task.validators } /></td>

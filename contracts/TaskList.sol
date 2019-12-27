@@ -110,6 +110,7 @@ contract TaskList {
 		Task storage _task = tasks[_task_id];
 		_task.workers.push(_worker);
 		_task.workers_map[_worker] = true;
+		_task.worked_hours[_worker] = 0;
 		emit workerAdded(_task_id, _worker);
 	}
 
@@ -117,11 +118,15 @@ contract TaskList {
 		return tasks[_task_id].workers;
 	}
 
-	function addWorkedHours(uint8 _task_id, uint _hours) public {
+	function addWorkedHours(uint _task_id, uint _hours) public {
 		require(tasks[_task_id].workers_map[msg.sender], "Caller is not a worker of this task");
 		Task storage _task = tasks[_task_id];
 		_task.worked_hours[msg.sender] += _hours;
 		emit workedHoursAdded(_task_id, msg.sender, _hours);
+	}
+
+	function getWorkedHours(uint _task_id, address _worker) public view returns (uint) {
+		return tasks[_task_id].worked_hours[_worker];
 	}
 
 	function fundTaskEscrow(uint _task_id) public payable {

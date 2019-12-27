@@ -8,7 +8,8 @@ import { Heading, Form, Field, Input, Button, Box } from 'rimble-ui';
 
 class UpdateTask extends Component {
 
-  state = { contract: this.props.contract, new_validator: '', new_worker: '', task_id: this.props.router.query.id };
+  state = { contract: this.props.contract, new_validator: '', new_worker: '', task_id: this.props.router.query.id,
+             task: null };
 
   constructor(props) {
     super(props);
@@ -18,16 +19,59 @@ class UpdateTask extends Component {
   }
 
   componentDidMount = async () => {
-    const task = await this.state.contract.methods.tasks(this.state.task_id).call();
-    const task_exists = task.id == this.state.task_id; // if the id do not correspond, the task does not exists
-    this.setState({ task_exists });
+    const { contract, task_id } = this.state;
+    const accounts = await this.props.web3.eth.getAccounts();
+    const task = await contract.methods.tasks(task_id).call();
+    const task_exists = task.id == task_id; // if the id do not correspond, the task does not exists
+    let fields = false;
+
+    if(task_exists){
+      task.validators = await contract.methods.getValidators(task_id).call();
+      task.workers = await contract.methods.getWorkers(task_id).call();
+
+      if(task.validators.includes(accounts[0])){ // if the connected user is a validator
+        fields =
+        <div>
+          <Field label="Add validator (address):" mr={5}>
+            <Input
+              name="new_validator"
+              type="text"
+              value={this.state.new_validator}
+              onChange={this.handleChange} 
+              placeholder="e.g. 0xAc03BB73b6a9e108530AFf4Df5077c2B3D481e5A"
+            />
+          </Field>
+          <Field label="Add Worker (address):" >
+            <Input
+              name="new_worker"
+              type="text"
+              value={this.state.new_worker}
+              onChange={this.handleChange}
+              placeholder="e.g. 0xAc03BB73b6a9e108530AFf4Df5077c2B3D481e5A"
+            />
+          </Field>
+        </div>
+      }
+      if(task.workers.includes(accounts[0])){
+        fields =
+        <Field label="Add worked hours">
+          <Input
+            name="worked_hours"
+            type="number"
+            value={this.state.worked_hours}
+            onChange={this.handleChange}
+          />
+        </Field>
+      }
+    }
+
+    this.setState({ task_exists, task, accounts, fields });
   }
 
   handleChange(event) {
     const target = event.target;
     const value = target.type === 'checkbox' ? target.checked : target.value;
     const name = target.name;
-
     this.setState({
       [name]: value
     });
@@ -35,8 +79,7 @@ class UpdateTask extends Component {
 
   handleSubmit = async (event) => {
     event.preventDefault();
-    const { contract } = this.state;
-    const accounts = await this.props.web3.eth.getAccounts();
+    const { contract, accounts } = this.state;
 
     if(this.state.new_validator.length == 42){
       await contract.methods.addValidator(this.state.task_id, this.state.new_validator).send({ from: accounts[0] });
@@ -44,39 +87,29 @@ class UpdateTask extends Component {
     if(this.state.new_worker.length == 42){
       await contract.methods.addWorker(this.state.task_id, this.state.new_worker).send({ from: accounts[0] });
     }
-    window.location.reload(false); 
+    if(this.state.worked_hours > 0){
+      await contract.methods.addWorkedHours(this.state.task_id, this.state.worked_hours).send({ from: accounts[0] });
+    }
+    window.location.replace("/tasks/".concat(this.state.task_id)); 
   }
 
   render () {
 
     if(this.state.task_exists){ 
-      return (
-        <Box boxShadow={3} m={50} p={20}>
-        <Heading as={"h3"} mb={2}>Update task with id {this.state.task_id}</Heading>
-          <Form onSubmit={this.handleSubmit}>
-            <Field label="Add validator (address):" mr={5}>
-              <Input
-                name="new_validator"
-                type="text"
-                value={this.state.new_validator}
-                onChange={this.handleChange} 
-                placeholder="e.g. 0xAc03BB73b6a9e108530AFf4Df5077c2B3D481e5A"
-              />
-            </Field>
-            <Field label="Add Worker (address):" >
-              <Input
-                name="new_worker"
-                type="text"
-                value={this.state.new_worker}
-                onChange={this.handleChange} 
-                placeholder="e.g. 0xAc03BB73b6a9e108530AFf4Df5077c2B3D481e5A"
-              />
-            </Field>
-            <br />
-            <Button type="submit"> Update task </Button>
-          </Form>
-        </Box>
-      )
+      if(this.state.fields != false){
+        return (
+          <Box boxShadow={3} m={50} p={20}>
+          <Heading as={"h3"} mb={2}>Update task with id {this.state.task_id}</Heading>
+            <Form onSubmit={this.handleSubmit}>
+              {this.state.fields}
+              <br />
+              <Button type="submit"> Update task </Button>
+            </Form>
+          </Box>
+        )
+      } else {
+        return <Heading as={"h3"} m={20}>You do not have access to modify this task.</Heading>
+      }
     } else {
       return <Heading as={"h3"} m={20}>Task with id {this.state.task_id} does not exists</Heading>
     }

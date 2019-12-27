@@ -92,6 +92,8 @@ contract('TaskList Tests', (accounts) => {
       result, 'workedHoursAdded', (ev) => {
       return ev.task_id == 0 && ev.worker == worker_1 && ev._hours == 2
     });
+    let hours = await this.tasklist.getWorkedHours(0, worker_1);
+    assert.equal(hours, 2)
   });
 
   it('non-worker tries to add worked hours, which is not permitted', async () => {
