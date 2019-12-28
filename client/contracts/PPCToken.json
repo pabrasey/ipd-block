@@ -1141,12 +1141,12 @@
         }
       },
       "links": {},
-      "address": "0xf4C32c4b4f2F7f8e3F691F19395Ae6a1F52CB091",
-      "transactionHash": "0x0fa45e5a3c3f2bd0b27ecf1f34ce2e8568a10808ea45be8220576f47fc3bfe4b"
+      "address": "0x8AdAb1aE0DFB20D5Bd4e7DE710f39ACD8B694940",
+      "transactionHash": "0x8ff5b47565255c54e77bb293e99d6944b321cddf55eff460d2437e0a62e86fa6"
     }
   },
   "schemaVersion": "3.0.19",
-  "updatedAt": "2019-12-27T09:09:23.150Z",
+  "updatedAt": "2019-12-27T16:48:18.067Z",
   "networkType": "ethereum",
   "devdoc": {
     "methods": {

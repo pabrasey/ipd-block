@@ -11,6 +11,9 @@ export default class Web3Container extends React.Component {
       const accounts = await web3.eth.getAccounts()
       if(this.props.contractDefinition != null){
         const contract = await getContract(web3, this.props.contractDefinition);
+        window.ethereum.on('accountsChanged', function (accounts) {
+          window.location.reload(false)
+        });
         this.setState({ web3, accounts, contract })
       }
       else{

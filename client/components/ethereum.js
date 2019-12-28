@@ -7,7 +7,7 @@ export class AddressList extends React.Component {
   
       let list = [];
       addresses.forEach((address, index) => {
-        list.push(<EthAddress address = {address} key = {index} />);
+        list.push(<EthAddress address = {address} key = {index} maxWidth={400}/>);
       });
   
       return list;

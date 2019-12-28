@@ -13,8 +13,8 @@ class Tasks extends React.Component {
     componentDidMount = async () => {
         const ppctoken = this.props.contract;
         const accounts = await this.props.web3.eth.getAccounts();
-        accounts.push("0x299818F98284FC7dbE0721827A5678FD091B91A2", "0x1AEf5FCA1cd59978214b70bd734334F3f93F88be", 
-        "0xebd7F835f3E3c80ab1F2F3F05dd40398EeA4d1F7");
+        accounts.push("0x8980612Ff293cB12527D56EF375db8CCd1fB7E61", "0x299818F98284FC7dbE0721827A5678FD091B91A2", 
+        "0x1AEf5FCA1cd59978214b70bd734334F3f93F88be", "0xebd7F835f3E3c80ab1F2F3F05dd40398EeA4d1F7");
 
         let ppc_balances = [];
         for(var i = 0; i < accounts.length; i++){

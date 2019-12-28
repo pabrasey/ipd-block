@@ -99,7 +99,7 @@ contract('TaskList Tests', (accounts) => {
   it('non-worker tries to add worked hours, which is not permitted', async () => {
     truffleAssert.reverts(
       this.tasklist.addWorkedHours(0, 2, {from: validator_0}),
-      "Caller is not a worker of this task"
+      "Worker is not assigned to this task"
     )
   });
 
@@ -118,24 +118,29 @@ contract('TaskList Tests', (accounts) => {
     assert.equal(deposit, amount);
   });
 
-  it('mints PPCToken to given account according to PPC', async () => {
+  it('completes task', async () => {
+    await this.tasklist.completeTask(0, 100, {from: worker_1});
+    let task = await this.tasklist.tasks(0);
+    assert.equal(task.ppc_worker, 100);
+    assert.equal(task.state, 2);
+  });
+
+  it('validates task and mints PPCToken', async () => {
     let is_minter = await this.ppctoken.isMinter(this.tasklist.address);
     assert.isTrue(is_minter);
+    let balance_before = await this.ppctoken.balanceOf(worker_1);
 
-    // PPC greater or equal to threshold
-    const balance_before = await this.ppctoken.balanceOf(worker_2);
-    await this.tasklist.mintPPCTOken(worker_2, 100);
+    await this.tasklist.validateTask(0, 100, 10, {from: validator_0});
+
+    let task = await this.tasklist.tasks(0);
+    assert.equal(task.ppc, 100);
+    assert.equal(task.state, 3);
+    assert.equal(task.Qrating, 10)
 
     // check account balance
-    const balance_after = await this.ppctoken.balanceOf(worker_2);
-    let value = Number(balance_after) - Number(balance_before);
-    assert.equal(value, 1);
-
-    // PPC less than threshold
-    let result = await this.tasklist.mintPPCTOken(worker_2, 90);
-    const event = result.logs[0].args;
-    assert.equal(event.account, worker_2);
-    assert.equal(event.amount.toNumber(), 0);
+    let balance_after = await this.ppctoken.balanceOf(worker_1);
+    let diff = Number(balance_after) - Number(balance_before);
+    assert.equal(diff, 1);
   });
 
   /*

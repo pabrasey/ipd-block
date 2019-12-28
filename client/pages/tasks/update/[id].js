@@ -23,12 +23,46 @@ class UpdateTask extends Component {
     const accounts = await this.props.web3.eth.getAccounts();
     const task = await contract.methods.tasks(task_id).call();
     const task_exists = task.id == task_id; // if the id do not correspond, the task does not exists
-    let fields = false;
 
     if(task_exists){
       task.validators = await contract.methods.getValidators(task_id).call();
       task.workers = await contract.methods.getWorkers(task_id).call();
+    }
 
+    this.setState({ task_exists, task, accounts });
+  }
+
+  handleChange(event) {
+    const target = event.target;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const name = target.name;
+    this.setState({
+      [name]: value
+    });
+  }
+
+  handleSubmit = async (event) => {
+    event.preventDefault();
+    const { contract, accounts } = this.state;
+
+    if(this.state.new_validator.length == 42){
+      await contract.methods.addValidator(this.state.task_id, this.state.new_validator).send({ from: accounts[0] });
+    }
+    if(this.state.new_worker.length == 42){
+      await contract.methods.addWorker(this.state.task_id, this.state.new_worker).send({ from: accounts[0] });
+    }
+    if(this.state.worked_hours > 0){
+      await contract.methods.addWorkedHours(this.state.task_id, this.state.worked_hours).send({ from: accounts[0] });
+    }
+    window.location.replace("/tasks/".concat(this.state.task_id)); 
+  }
+
+  render () {
+
+    const { task_exists, task, accounts } = this.state;
+    let fields = false;
+
+    if(task_exists){
       if(task.validators.includes(accounts[0])){ // if the connected user is a validator
         fields =
         <div>
@@ -61,47 +95,17 @@ class UpdateTask extends Component {
             value={this.state.worked_hours}
             onChange={this.handleChange}
           />
-        </Field>
+        </Field> 
       }
     }
 
-    this.setState({ task_exists, task, accounts, fields });
-  }
-
-  handleChange(event) {
-    const target = event.target;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
-    const name = target.name;
-    this.setState({
-      [name]: value
-    });
-  }
-
-  handleSubmit = async (event) => {
-    event.preventDefault();
-    const { contract, accounts } = this.state;
-
-    if(this.state.new_validator.length == 42){
-      await contract.methods.addValidator(this.state.task_id, this.state.new_validator).send({ from: accounts[0] });
-    }
-    if(this.state.new_worker.length == 42){
-      await contract.methods.addWorker(this.state.task_id, this.state.new_worker).send({ from: accounts[0] });
-    }
-    if(this.state.worked_hours > 0){
-      await contract.methods.addWorkedHours(this.state.task_id, this.state.worked_hours).send({ from: accounts[0] });
-    }
-    window.location.replace("/tasks/".concat(this.state.task_id)); 
-  }
-
-  render () {
-
     if(this.state.task_exists){ 
-      if(this.state.fields != false){
+      if(fields != false){
         return (
           <Box boxShadow={3} m={50} p={20}>
           <Heading as={"h3"} mb={2}>Update task with id {this.state.task_id}</Heading>
             <Form onSubmit={this.handleSubmit}>
-              {this.state.fields}
+              {fields}
               <br />
               <Button type="submit"> Update task </Button>
             </Form>

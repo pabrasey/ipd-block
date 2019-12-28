@@ -6,7 +6,7 @@ class BalanceRow extends React.Component {
       return (
         <tr>
           <td><EthAddress address = { this.props.balance.account } /></td>
-          <td>{ this.props.balance.balance }</td>
+          <td align="right"><strong>{ this.props.balance.balance }</strong></td>
         </tr>
       );
     }

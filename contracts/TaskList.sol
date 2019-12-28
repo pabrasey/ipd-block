@@ -5,8 +5,9 @@ import './PPCToken.sol';
 
 contract TaskList {
 	uint public task_count = 0;
-	enum State { created, accepted, completed, reviewed }
+	enum State { created, accepted, completed, validated }
 	uint8[] ratings = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+	uint8 ppc_threshold = 90;
 	// enum Difficulty { standard, advanced , expert }
 	// enum Uncertainity { clear, uncertain, unknown }
 	PPCToken private ppctoken;
@@ -21,7 +22,9 @@ contract TaskList {
 		string description;
 		State state;
 		uint deadline;
-		uint8 rating;
+		uint8 Qrating;
+		uint8 ppc;
+		uint8 ppc_worker;
 		mapping(address => bool) validators_map;
 		address[] validators;
 		mapping(address => bool) workers_map;
@@ -43,9 +46,14 @@ contract TaskList {
 
 	event Test(bool is_true);
 
-	modifier validatorsOnly(uint _id) {
+	modifier validatorsOnly(uint _task_id) {
 		// checks that the sender is a validator of task
-		require(tasks[_id].validators_map[msg.sender], "Caller is not a validator of this task");
+		require(tasks[_task_id].validators_map[msg.sender], "Caller is not a validator of this task");
+		_;
+	}
+
+	modifier workersOnly(uint _task_id, address _account) {
+		require(tasks[_task_id].workers_map[_account], "Worker is not assigned to this task");
 		_;
 	}
 
@@ -84,7 +92,19 @@ contract TaskList {
 
 	function createTask(string memory _title, string memory _description) public {
 		uint _id = task_count;
-		Task memory task = Task(_id, _title, _description, State.created, 0, 0, new address[](0), new address[](0), new Escrow());
+		Task memory task = Task({
+			id: _id,
+			title: _title,
+			description: _description,
+			state: State.created,
+			deadline: 0,
+			Qrating: 0,
+			ppc: 0,
+			ppc_worker: 0,
+			validators: new address[](0),
+			workers: new address[](0),
+			escrow: new Escrow()
+		});
 		// https://medium.com/loom-network/ethereum-solidity-memory-vs-storage-how-to-initialize-an-array-inside-a-struct-184baf6aa2eb
 		tasks[_id] = task;
 		task_count++;
@@ -118,8 +138,7 @@ contract TaskList {
 		return tasks[_task_id].workers;
 	}
 
-	function addWorkedHours(uint _task_id, uint _hours) public {
-		require(tasks[_task_id].workers_map[msg.sender], "Caller is not a worker of this task");
+	function addWorkedHours(uint _task_id, uint _hours) public workersOnly(_task_id, msg.sender) {
 		Task storage _task = tasks[_task_id];
 		_task.worked_hours[msg.sender] += _hours;
 		emit workedHoursAdded(_task_id, msg.sender, _hours);
@@ -143,12 +162,34 @@ contract TaskList {
 		return _task.escrow.depositsOf(_task.workers[0]);
 	}
 
-	function mintPPCTOken(address _account, uint8 _ppc) public {
-		if(_ppc >= 100) {
-			ppctoken.mint(_account, 1);
-			emit PPCTokenMinted(_account, 1);
+	function completeTask(uint _task_id, uint8 _ppc) public workersOnly(_task_id, msg.sender) {
+		Task storage _task = tasks[_task_id];
+		_task.ppc_worker = _ppc;
+		_task.state = State.completed;
+	}
+
+	function validateTask(uint _task_id, uint8 _ppc, uint8 _Qrating) public validatorsOnly(_task_id) {
+		// todo: add state check
+		Task storage _task = tasks[_task_id];
+		if(_ppc >= _task.ppc_worker) {
+			_task.ppc = _ppc;
+			_task.state = State.validated;
+			_task.Qrating = _Qrating;
+			mintPPCTOken(_task_id);
+		} else {
+			_task.ppc = _ppc;
 		}
-		emit PPCTokenMinted(_account, 0);
+	}
+
+	function mintPPCTOken(uint _task_id) public {
+		Task memory _task = tasks[_task_id];
+		if(_task.ppc >= ppc_threshold) {
+			for(uint16 i = 0; i < _task.workers.length; i++) {
+				address _worker = _task.workers[i];
+				ppctoken.mint(_worker, 1);
+				emit PPCTokenMinted(_worker, 1);
+			}
+		}
 	}
 
 	function toggleStarted(uint8 _id) public {

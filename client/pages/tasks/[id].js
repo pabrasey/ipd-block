@@ -7,6 +7,8 @@ import WorkedHoursTable from './components/workedHoursTable'
 import { withRouter } from 'next/router';
 import { Heading, Box, Text, Button, Link, Field } from 'rimble-ui';
 
+const task_state = { 0: 'created', 1: 'accepted', 2: 'completed', 3: 'validated' };
+
 class TaskInfo extends Component {
 
     render () {
@@ -21,32 +23,56 @@ class TaskInfo extends Component {
 
 class ViewTask extends Component {
 
-    state = { contract: this.props.contract, task_id: this.props.router.query.id };
+    state = { contract: this.props.contract, accounts: this.props.accounts, task_id: this.props.router.query.id };
 
     componentDidMount = async () => {
-        const contract = this.state.contract;
-        const task_id = this.state.task_id;
+      const contract = this.state.contract;
+      const task_id = this.state.task_id;
 
-        const task = await contract.methods.tasks(task_id).call();
-        let task_exists = task.id == this.state.task_id; // if the id do not correspond, the task does not exists
+      const task = await contract.methods.tasks(task_id).call();
+      let task_exists = task.id == this.state.task_id; // if the id do not correspond, the task does not exists
 
+      if(task_exists){      
         task.validators = await contract.methods.getValidators(task_id).call();
         task.workers = await contract.methods.getWorkers(task_id).call();
 
+        // worked hours
         let worked_hours = []
         for (let i = 0; i < task.workers.length; i++) {
-          let worker = task.workers[i];
-          let hours = await contract.methods.getWorkedHours(task_id, worker).call();
-          worked_hours.push({ worker, hours })   
+            let worker = task.workers[i];
+            let hours = await contract.methods.getWorkedHours(task_id, worker).call();
+            worked_hours.push({ worker, hours })   
         }
         task.worked_hours = worked_hours;
+      }
+      // 
 
-        this.setState({ task, task_exists });
+      this.setState({ task, task_exists });
     }
 
   render () {
 
-    const task = this.state.task;
+    const { task_exists, task, accounts } = this.state;
+
+    let button = '';
+    let Qrating = '';
+    if(task_exists){
+        if(task.validators.includes(accounts[0]) && task.ppc_worker != 0 && task.state == 2){ 
+            button = 
+            <Button.Outline as="a" href={"validate/".concat(task.id)} title="Validate task" ml={80}>
+                Validate task
+            </Button.Outline>
+        }
+        if(task.workers.includes(accounts[0]) && task.state < 2){
+            button = 
+            <Button.Outline as="a" href={"complete/".concat(task.id)} title="Complete task" ml={80}>
+                Complete task
+            </Button.Outline>
+        }
+        if(task.state > 2){
+            Qrating = <TaskInfo info={"Quality rating"} content={task.Qrating} />
+        }
+    }
 
     if(this.state.task_exists){ 
       return (
@@ -54,12 +80,17 @@ class ViewTask extends Component {
             <Heading as={"h3"} mb={2}>Task properties</Heading>
             <TaskInfo info={"Id"} content={task.id} />
             <TaskInfo info={"Title"} content={task.title} />
+            <TaskInfo info={"State"} content={task_state[task.state]} />
             <TaskInfo info={"Description"} content={task.description} />
+            <TaskInfo info={"PPC"} content={task.ppc} />
+            <TaskInfo info={"PPC from workers"} content={task.ppc_worker} />
+            {Qrating}
             <TaskInfo info={"Validators"} content={<AddressList addresses={task.validators} />} />
             <WorkedHoursTable worked_hours={task.worked_hours} />
-            <Button as="a" href={"update/".concat(task.id)} title="Update taks" m={20}>
+            <Button as="a" href={"update/".concat(task.id)} title="Update task" m={20}>
               Update task
             </Button>
+            {button}
         </Box>
       )
     } else {
