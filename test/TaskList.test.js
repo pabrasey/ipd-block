@@ -131,6 +131,7 @@ contract('TaskList Tests', (accounts) => {
   });
 
   it('validates task and mints PPCToken', async () => {
+    let task = await this.tasklist.tasks(task_id);
     await this.tasklist.addWorker(task_id, worker_2, {from: validator_1});
     await this.tasklist.addWorkedHours(task_id, worker_hours_2, {from: worker_2});
 
@@ -138,15 +139,19 @@ contract('TaskList Tests', (accounts) => {
     assert.isTrue(is_minter);
     let ppc_balance_before = await this.ppctoken.balanceOf(worker_1);
     let contract_balance_before = await this.tasklist.getContractBalance();
+    let task_balance_before = await task.balance;
+
+    let suf = await this.tasklist.sufficientFunds(0);
+    assert.isTrue(suf);
 
     await this.tasklist.validateTask(task_id, 100, 10, {from: validator_0});
 
-    let task = await this.tasklist.tasks(task_id);
+    task = await this.tasklist.tasks(task_id);
     assert.equal(task.ppc, 100);
     assert.equal(task.state, 3);
     assert.equal(task.Qrating, 10)
 
-    // check account balance
+    // check balances
     let ppc_balance_after = await this.ppctoken.balanceOf(worker_1);
     let ppc_diff = Number(ppc_balance_after) - Number(ppc_balance_before);
     assert.equal(ppc_diff, 1);
@@ -155,6 +160,10 @@ contract('TaskList Tests', (accounts) => {
     let ether_diff = Number(contract_balance_before) - Number(contract_balance_after);
     const salary = await this.tasklist.salary();
     assert.equal(ether_diff, salary * (worker_hours_1 + worker_hours_2));
+
+    let task_balance_after = await task.balance;
+    let task_diff = Number(task_balance_before) - Number(task_balance_after);
+    assert.equal(task_diff, ether_diff);
   });
 
   /*

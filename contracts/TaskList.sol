@@ -162,7 +162,7 @@ contract TaskList {
 		_task.state = State.completed;
 	}
 
-	function neededTaskFund(uint _task_id) internal view returns (uint) {
+	function neededTaskFund(uint _task_id) public view returns (uint) {
 		Task storage _task = tasks[_task_id];
 		uint amount;
 		for(uint16 i = 0; i < _task.workers.length; i++) {
@@ -195,7 +195,9 @@ contract TaskList {
 		Task storage _task = tasks[_task_id];
 		for(uint16 i = 0; i < _task.workers.length; i++) {
 			address payable _worker = _task.workers[i];
-			_worker.transfer(_task.worked_hours[_worker] * salary);
+			uint amount = _task.worked_hours[_worker] * salary;
+			_task.balance -= amount;
+			_worker.transfer(amount);
 		}
 	}
 

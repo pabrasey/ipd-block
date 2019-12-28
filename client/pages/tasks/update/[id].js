@@ -54,6 +54,9 @@ class UpdateTask extends Component {
     if(this.state.worked_hours > 0){
       await contract.methods.addWorkedHours(this.state.task_id, this.state.worked_hours).send({ from: accounts[0] });
     }
+    if(this.state.fund > 0){
+      await contract.methods.fundTask(this.state.task_id).send({ value: this.state.fund * 10**18, from: accounts[0] });
+    }
     window.location.replace("/tasks/".concat(this.state.task_id)); 
   }
 
@@ -75,13 +78,21 @@ class UpdateTask extends Component {
               placeholder="e.g. 0xAc03BB73b6a9e108530AFf4Df5077c2B3D481e5A"
             />
           </Field>
-          <Field label="Add Worker (address):" >
+          <Field label="Add Worker (address):" mr={5}>
             <Input
               name="new_worker"
               type="text"
               value={this.state.new_worker}
               onChange={this.handleChange}
               placeholder="e.g. 0xAc03BB73b6a9e108530AFf4Df5077c2B3D481e5A"
+            />
+          </Field>
+          <Field label="Fund task (ether):" >
+            <Input
+              name="fund"
+              type="number"
+              value={this.state.fund}
+              onChange={this.handleChange}
             />
           </Field>
         </div>

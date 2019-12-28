@@ -27,6 +27,7 @@ class ViewTask extends Component {
 
     componentDidMount = async () => {
       const contract = this.state.contract;
+      const salary = await contract.methods.salary().call();
       const task_id = this.state.task_id;
 
       const task = await contract.methods.tasks(task_id).call();
@@ -35,33 +36,40 @@ class ViewTask extends Component {
       if(task_exists){      
         task.validators = await contract.methods.getValidators(task_id).call();
         task.workers = await contract.methods.getWorkers(task_id).call();
+        task.neededFunds = await contract.methods.neededTaskFund(task_id).call();
 
         // worked hours
         let worked_hours = []
         for (let i = 0; i < task.workers.length; i++) {
             let worker = task.workers[i];
             let hours = await contract.methods.getWorkedHours(task_id, worker).call();
-            worked_hours.push({ worker, hours })   
+            worked_hours.push({ worker, hours: Number(hours) });
         }
         task.worked_hours = worked_hours;
       }
-      // 
 
-      this.setState({ task, task_exists });
+      this.setState({ task, task_exists, salary: Number(salary) / 10**18 });
     }
 
   render () {
 
-    const { task_exists, task, accounts } = this.state;
+    const { task_exists, task, accounts, salary } = this.state;
 
     let button = '';
     let Qrating = '';
     if(task_exists){
-        if(task.validators.includes(accounts[0]) && task.ppc_worker != 0 && task.state == 2){ 
-            button = 
-            <Button.Outline as="a" href={"validate/".concat(task.id)} title="Validate task" ml={80}>
-                Validate task
-            </Button.Outline>
+        if(task.validators.includes(accounts[0]) && task.ppc_worker != 0 && task.state == 2){
+            if(Number(task.balance) >= Number(task.neededFunds)){
+              button = 
+              <Button.Outline as="a" href={"validate/".concat(task.id)} title="Validate task" ml={80}>
+                  Validate task
+              </Button.Outline>
+            } else {
+              button = 
+              <Button.Outline as="a" href={"update/".concat(task.id)} title="Update task" ml={80}>
+                  Add funds before validating task
+              </Button.Outline>
+            }
         }
         if(task.workers.includes(accounts[0]) && task.state < 2){
             button = 
@@ -85,8 +93,9 @@ class ViewTask extends Component {
             <TaskInfo info={"PPC"} content={task.ppc} />
             <TaskInfo info={"PPC from workers"} content={task.ppc_worker} />
             {Qrating}
+            <TaskInfo info={"Available funds"} content={(task.balance / 10**18).toString().concat(" ether")} />
             <TaskInfo info={"Validators"} content={<AddressList addresses={task.validators} />} />
-            <WorkedHoursTable worked_hours={task.worked_hours} />
+            <WorkedHoursTable worked_hours={task.worked_hours} salary={salary} />
             <Button as="a" href={"update/".concat(task.id)} title="Update task" m={20}>
               Update task
             </Button>
