@@ -1,6 +1,7 @@
 pragma solidity ^0.5.11;
 
 import '../node_modules/@openzeppelin/contracts/payment/escrow/Escrow.sol';
+import '../node_modules/@openzeppelin/contracts/payment/PaymentSplitter.sol';
 import './PPCToken.sol';
 
 contract TaskList {
@@ -8,6 +9,7 @@ contract TaskList {
 	enum State { created, accepted, completed, validated }
 	uint8[] ratings = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 	uint8 ppc_threshold = 90;
+	uint public salary = 1 ether;
 	// enum Difficulty { standard, advanced , expert }
 	// enum Uncertainity { clear, uncertain, unknown }
 	PPCToken private ppctoken;
@@ -28,9 +30,9 @@ contract TaskList {
 		mapping(address => bool) validators_map;
 		address[] validators;
 		mapping(address => bool) workers_map;
-		address[] workers;
+		address payable[] workers;
 		mapping(address => uint) worked_hours;
-		Escrow escrow;
+		uint balance;
 		//uint predecessor_id;
 		//uint successor_id;
 	}
@@ -81,7 +83,6 @@ contract TaskList {
 	event taskFunded(
 		uint task_id,
 		address sender,
-		address receiver,
 		uint256 amount
 	);
 
@@ -102,8 +103,8 @@ contract TaskList {
 			ppc: 0,
 			ppc_worker: 0,
 			validators: new address[](0),
-			workers: new address[](0),
-			escrow: new Escrow()
+			workers: new address payable[](0),
+			balance: 0
 		});
 		// https://medium.com/loom-network/ethereum-solidity-memory-vs-storage-how-to-initialize-an-array-inside-a-struct-184baf6aa2eb
 		tasks[_id] = task;
@@ -125,7 +126,7 @@ contract TaskList {
 		return tasks[_task_id].validators;
 	}
 
-	function addWorker(uint _task_id, address _worker) public validatorsOnly(_task_id) {
+	function addWorker(uint _task_id, address payable _worker) public validatorsOnly(_task_id) {
 		require(!tasks[_task_id].validators_map[_worker], "Validator cannot be worker");
 		Task storage _task = tasks[_task_id];
 		_task.workers.push(_worker);
@@ -134,7 +135,7 @@ contract TaskList {
 		emit workerAdded(_task_id, _worker);
 	}
 
-	function getWorkers(uint _task_id) public view returns (address[] memory) {
+	function getWorkers(uint _task_id) public view returns (address payable[] memory) {
 		return tasks[_task_id].workers;
 	}
 
@@ -148,18 +149,11 @@ contract TaskList {
 		return tasks[_task_id].worked_hours[_worker];
 	}
 
-	function fundTaskEscrow(uint _task_id) public payable {
-		// stores funds for the given task its corresponding escrow
+	function fundTask(uint _task_id) public payable {
+		// stores funds for the given task in this smart contract
 		Task storage _task = tasks[_task_id];
-
-		_task.escrow.deposit.value(msg.value)(_task.workers[0]);
-		// the 1st worker will get the payment -> add split payment later
-		emit taskFunded(_task_id, msg.sender, _task.workers[0], msg.value);
-	}
-
-	function getTaskDeposit(uint _task_id) public view returns (uint256) {
-		Task memory _task = tasks[_task_id];
-		return _task.escrow.depositsOf(_task.workers[0]);
+		_task.balance += msg.value;
+		emit taskFunded(_task_id, msg.sender, msg.value);
 	}
 
 	function completeTask(uint _task_id, uint8 _ppc) public workersOnly(_task_id, msg.sender) {
@@ -168,20 +162,44 @@ contract TaskList {
 		_task.state = State.completed;
 	}
 
+	function neededTaskFund(uint _task_id) internal view returns (uint) {
+		Task storage _task = tasks[_task_id];
+		uint amount;
+		for(uint16 i = 0; i < _task.workers.length; i++) {
+			address payable _worker = _task.workers[i];
+			amount += _task.worked_hours[_worker];
+		}
+		return amount * salary;
+	}
+
+	function sufficientFunds(uint _task_id) public view returns (bool) {
+		Task memory _task = tasks[_task_id];
+		return _task.balance >= neededTaskFund(_task_id);
+	}
+
 	function validateTask(uint _task_id, uint8 _ppc, uint8 _Qrating) public validatorsOnly(_task_id) {
 		// todo: add state check
 		Task storage _task = tasks[_task_id];
-		if(_ppc >= _task.ppc_worker) {
+		if(_ppc >= _task.ppc_worker && sufficientFunds(_task_id)) {
 			_task.ppc = _ppc;
 			_task.state = State.validated;
 			_task.Qrating = _Qrating;
+			releasePayment(_task_id);
 			mintPPCTOken(_task_id);
 		} else {
 			_task.ppc = _ppc;
 		}
 	}
 
-	function mintPPCTOken(uint _task_id) public {
+	function releasePayment(uint _task_id) internal {
+		Task storage _task = tasks[_task_id];
+		for(uint16 i = 0; i < _task.workers.length; i++) {
+			address payable _worker = _task.workers[i];
+			_worker.transfer(_task.worked_hours[_worker] * salary);
+		}
+	}
+
+	function mintPPCTOken(uint _task_id) internal {
 		Task memory _task = tasks[_task_id];
 		if(_task.ppc >= ppc_threshold) {
 			for(uint16 i = 0; i < _task.workers.length; i++) {
@@ -199,4 +217,7 @@ contract TaskList {
 		emit TaskState(_id, _task.state);
 	}
 
+	function getContractBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
 }
