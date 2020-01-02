@@ -108,11 +108,11 @@ contract('TaskList Tests', (accounts) => {
 
   it('funds task', async () => {
     const amount = web3.utils.toWei('10', "ether");
-    const balance_before = await web3.eth.getBalance(validator_1);
-    let result = await this.tasklist.fundTask(task_id, {from: validator_1, value: amount, gasPrice:0});
+    const balance_before = await web3.eth.getBalance(validator_0);
+    let result = await this.tasklist.fundTask(task_id, {from: validator_0, value: amount, gasPrice:0});
 
     // check account balance
-    const balance_after = await web3.eth.getBalance(validator_1);
+    const balance_after = await web3.eth.getBalance(validator_0);
     let value = Number(balance_before) - Number(balance_after);
     assert.equal(value, amount);
 
@@ -135,13 +135,14 @@ contract('TaskList Tests', (accounts) => {
     await this.tasklist.addWorker(task_id, worker_2, {from: validator_1});
     await this.tasklist.addWorkedHours(task_id, worker_hours_2, {from: worker_2});
 
-    let is_minter = await this.ppctoken.isMinter(this.tasklist.address);
+    const is_minter = await this.ppctoken.isMinter(this.tasklist.address);
     assert.isTrue(is_minter);
-    let ppc_balance_before = await this.ppctoken.balanceOf(worker_1);
-    let contract_balance_before = await this.tasklist.getContractBalance();
-    let task_balance_before = await task.balance;
+    const ppc_balance_before = await this.ppctoken.balanceOf(worker_1);
+    const contract_balance_before = await this.tasklist.getContractBalance();
+    const task_balance_before = await task.balance;
+    const payer_balance_before = await web3.eth.getBalance(validator_0);
 
-    let suf = await this.tasklist.sufficientFunds(0);
+    const suf = await this.tasklist.sufficientFunds(0);
     assert.isTrue(suf);
 
     await this.tasklist.validateTask(task_id, 100, 10, {from: validator_0});
@@ -151,19 +152,29 @@ contract('TaskList Tests', (accounts) => {
     assert.equal(task.state, 3);
     assert.equal(task.Qrating, 10)
 
-    // check balances
-    let ppc_balance_after = await this.ppctoken.balanceOf(worker_1);
-    let ppc_diff = Number(ppc_balance_after) - Number(ppc_balance_before);
+    // check ppc_balance
+    const ppc_balance_after = await this.ppctoken.balanceOf(worker_1);
+    const ppc_diff = Number(ppc_balance_after) - Number(ppc_balance_before);
     assert.equal(ppc_diff, 1);
 
-    let contract_balance_after = await this.tasklist.getContractBalance();
-    let ether_diff = Number(contract_balance_before) - Number(contract_balance_after);
-    const salary = await this.tasklist.salary();
-    assert.equal(ether_diff, salary * (worker_hours_1 + worker_hours_2));
+    // paid amount
+    const hourly_rate = await this.tasklist.hourly_rate();
+    const amount_paid = hourly_rate * (worker_hours_1 + worker_hours_2);
 
-    let task_balance_after = await task.balance;
-    let task_diff = Number(task_balance_before) - Number(task_balance_after);
-    assert.equal(task_diff, ether_diff);
+    // check task balance
+    const task_balance_after = await task.balance;
+    assert.equal(Number(task_balance_after), 0);
+
+    // check payer balance
+    const payer_balance_after = await web3.eth.getBalance(validator_0);
+    const amount_back = payer_balance_after - payer_balance_before
+    const rest = task_balance_before - amount_paid;
+    assert.isTrue((rest - amount_back) / rest < 0.001);
+
+    // check contract balance
+    const contract_balance_after = await this.tasklist.getContractBalance();
+    const contract_diff = Number(contract_balance_before) - Number(contract_balance_after);
+    assert.equal(contract_diff, amount_paid + rest);
   });
 
   /*

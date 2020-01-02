@@ -7,7 +7,7 @@ class Row extends React.Component {
         <tr>
           <td><EthAddress address = { this.props.work.worker } /></td>
           <td><strong fontSize={15}>{ this.props.work.hours }</strong></td>
-          <td><strong fontSize={15}>{ this.props.work.hours * this.props.salary }</strong></td>
+          <td><strong fontSize={15}>{ this.props.work.hours * this.props.hourly_rate }</strong></td>
         </tr>
       );
     }
@@ -18,14 +18,14 @@ class WorkedHoursTable extends Component {
     render() {
   
       const worked_hours = this.props.worked_hours;
-      const salary = this.props.salary;
+      const hourly_rate = this.props.hourly_rate;
 
       const rows = [];
 
       // balances.sort((a, b) => (a.balance < b.balance) ? 1 : -1);
       let total_hours = 0;
       worked_hours.forEach((work, index) => {
-        rows.push( <Row work = { work } salary = { salary } key = { index } /> );
+        rows.push( <Row work = { work } hourly_rate = { hourly_rate } key = { index } /> );
         total_hours += work.hours;
       });
 
@@ -43,7 +43,7 @@ class WorkedHoursTable extends Component {
             <tr>
               <td>Total:</td>
               <td>{total_hours}</td>
-              <td>{total_hours * salary}</td>
+              <td>{total_hours * hourly_rate}</td>
             </tr>
           </tbody>
         </Table>      

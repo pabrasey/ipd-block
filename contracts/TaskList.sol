@@ -9,7 +9,7 @@ contract TaskList {
 	enum State { created, accepted, completed, validated }
 	uint8[] ratings = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 	uint8 ppc_threshold = 90;
-	uint public salary = 1 ether;
+	uint public hourly_rate = 1 ether;
 	// enum Difficulty { standard, advanced , expert }
 	// enum Uncertainity { clear, uncertain, unknown }
 	PPCToken private ppctoken;
@@ -28,7 +28,7 @@ contract TaskList {
 		uint8 ppc;
 		uint8 ppc_worker;
 		mapping(address => bool) validators_map;
-		address[] validators;
+		address payable[] validators;
 		mapping(address => bool) workers_map;
 		address payable[] workers;
 		mapping(address => uint) worked_hours;
@@ -43,7 +43,7 @@ contract TaskList {
 		uint id,
 		string title,
 		State state,
-		address[] validators
+		address payable[] validators
 	);
 
 	event Test(bool is_true);
@@ -102,7 +102,7 @@ contract TaskList {
 			Qrating: 0,
 			ppc: 0,
 			ppc_worker: 0,
-			validators: new address[](0),
+			validators: new address payable[](0),
 			workers: new address payable[](0),
 			balance: 0
 		});
@@ -114,7 +114,7 @@ contract TaskList {
 		emit TaskCreated(_id, _title, State.created, tasks[_id].validators);
 	}
 
-	function addValidator(uint _task_id, address _validator) public validatorsOnly(_task_id) {
+	function addValidator(uint _task_id, address payable _validator) public validatorsOnly(_task_id) {
 		require(!tasks[_task_id].workers_map[_validator], "Worker cannot be validator");
 		Task storage _task = tasks[_task_id];
 		_task.validators.push(_validator);
@@ -122,7 +122,7 @@ contract TaskList {
 		emit validatorAdded(_task_id, _validator);
 	}
 
-	function getValidators(uint _task_id) public view returns (address[] memory) {
+	function getValidators(uint _task_id) public view returns (address payable[] memory) {
 		return tasks[_task_id].validators;
 	}
 
@@ -169,7 +169,7 @@ contract TaskList {
 			address payable _worker = _task.workers[i];
 			amount += _task.worked_hours[_worker];
 		}
-		return amount * salary;
+		return amount * hourly_rate;
 	}
 
 	function sufficientFunds(uint _task_id) public view returns (bool) {
@@ -195,10 +195,14 @@ contract TaskList {
 		Task storage _task = tasks[_task_id];
 		for(uint16 i = 0; i < _task.workers.length; i++) {
 			address payable _worker = _task.workers[i];
-			uint amount = _task.worked_hours[_worker] * salary;
+			uint amount = _task.worked_hours[_worker] * hourly_rate;
 			_task.balance -= amount;
 			_worker.transfer(amount);
 		}
+		uint rest = _task.balance;
+		_task.balance -= rest;
+		_task.validators[0].transfer(rest); // return the rest to the validator
+		// todo: keep track of which address funded the task
 	}
 
 	function mintPPCTOken(uint _task_id) internal {

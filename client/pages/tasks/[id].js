@@ -27,7 +27,7 @@ class ViewTask extends Component {
 
     componentDidMount = async () => {
       const contract = this.state.contract;
-      const salary = await contract.methods.salary().call();
+      const hourly_rate = await contract.methods.hourly_rate().call();
       const task_id = this.state.task_id;
 
       const task = await contract.methods.tasks(task_id).call();
@@ -48,12 +48,12 @@ class ViewTask extends Component {
         task.worked_hours = worked_hours;
       }
 
-      this.setState({ task, task_exists, salary: Number(salary) / 10**18 });
+      this.setState({ task, task_exists, hourly_rate: Number(hourly_rate) / 10**18 });
     }
 
   render () {
 
-    const { task_exists, task, accounts, salary } = this.state;
+    const { task_exists, task, accounts, hourly_rate } = this.state;
 
     let button = '';
     let Qrating = '';
@@ -95,7 +95,7 @@ class ViewTask extends Component {
             {Qrating}
             <TaskInfo info={"Available funds"} content={(task.balance / 10**18).toString().concat(" ether")} />
             <TaskInfo info={"Validators"} content={<AddressList addresses={task.validators} />} />
-            <WorkedHoursTable worked_hours={task.worked_hours} salary={salary} />
+            <WorkedHoursTable worked_hours={task.worked_hours} hourly_rate={hourly_rate} />
             <Button as="a" href={"update/".concat(task.id)} title="Update task" m={20}>
               Update task
             </Button>
