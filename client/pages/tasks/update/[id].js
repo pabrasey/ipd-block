@@ -63,30 +63,36 @@ class UpdateTask extends Component {
   render () {
 
     const { task_exists, task, accounts } = this.state;
-    let fields = false;
+    let fund_field = false;
+    let add_fields = '';
 
     if(task_exists){
       if(task.validators.includes(accounts[0])){ // if the connected user is a validator
-        fields =
+        if(task.state == 0){
+          add_fields =
+            <div>
+              <Field label="Add validator (address):" mr={5}>
+                <Input
+                  name="new_validator"
+                  type="text"
+                  value={this.state.new_validator}
+                  onChange={this.handleChange} 
+                  placeholder="e.g. 0xAc03BB73b6a9e108530AFf4Df5077c2B3D481e5A"
+                />
+              </Field>
+              <Field label="Add Worker (address):" mr={5}>
+                <Input
+                  name="new_worker"
+                  type="text"
+                  value={this.state.new_worker}
+                  onChange={this.handleChange}
+                  placeholder="e.g. 0xAc03BB73b6a9e108530AFf4Df5077c2B3D481e5A"
+                />
+              </Field>
+            </div>
+        }
+        fund_field =
         <div>
-          <Field label="Add validator (address):" mr={5}>
-            <Input
-              name="new_validator"
-              type="text"
-              value={this.state.new_validator}
-              onChange={this.handleChange} 
-              placeholder="e.g. 0xAc03BB73b6a9e108530AFf4Df5077c2B3D481e5A"
-            />
-          </Field>
-          <Field label="Add Worker (address):" mr={5}>
-            <Input
-              name="new_worker"
-              type="text"
-              value={this.state.new_worker}
-              onChange={this.handleChange}
-              placeholder="e.g. 0xAc03BB73b6a9e108530AFf4Df5077c2B3D481e5A"
-            />
-          </Field>
           <Field label="Fund task (ether):" >
             <Input
               name="fund"
@@ -111,12 +117,13 @@ class UpdateTask extends Component {
     }
 
     if(this.state.task_exists){ 
-      if(fields != false){
+      if(fund_field != false){
         return (
           <Box boxShadow={3} m={50} p={20}>
           <Heading as={"h3"} mb={2}>Update task with id {this.state.task_id}</Heading>
             <Form onSubmit={this.handleSubmit}>
-              {fields}
+              {add_fields}
+              {fund_field}
               <br />
               <Button type="submit"> Update task </Button>
             </Form>

@@ -6,13 +6,13 @@ const truffleAssert = require('truffle-assertions');
 
 contract('TaskList Tests', (accounts) => {
 
-  const validator_0 = accounts[0];
-  const validator_1 = accounts[1];
+  const validator_1 = accounts[0];
+  const validator_2 = accounts[1];
   const worker_1 = accounts[2];
   const worker_hours_1 = 2;
   const worker_hours_2 = 3;
   const worker_2 = accounts[3];
-  const task_id = 1;
+  const task_id = 3;
 
   before(async () => {
     this.ppctoken = await PPCToken.deployed()
@@ -48,14 +48,14 @@ contract('TaskList Tests', (accounts) => {
 
   it('adds validator from the allowed accounts', async () => {
     // validator adds new validator
-    let result_1 = await this.tasklist.addValidator(task_id, validator_1, {from: validator_0});
+    let result_1 = await this.tasklist.addValidator(task_id, validator_2, {from: validator_1});
 
     truffleAssert.eventEmitted(result_1, 'validatorAdded', (ev) => {
-      return ev.task_id == task_id && ev.validator == validator_1;
+      return ev.task_id == task_id && ev.validator == validator_2;
     });
 
     let validators = await this.tasklist.getValidators(task_id);
-    assert.equal(validators[1], validator_1);
+    assert.equal(validators[1], validator_2);
   });
 
   it('worker tries to add a validator, which is not permitted', async () => {
@@ -67,7 +67,7 @@ contract('TaskList Tests', (accounts) => {
 
   it('adds worker from the allowed accounts', async () => {
     // validator adds new worker
-    let result_1 = await this.tasklist.addWorker(task_id, worker_1, {from: validator_1});
+    let result_1 = await this.tasklist.addWorker(task_id, worker_1, {from: validator_2});
     truffleAssert.eventEmitted(result_1, 'workerAdded', (ev) => {
       return ev.task_id == task_id && ev.worker == worker_1;
     });
@@ -84,7 +84,7 @@ contract('TaskList Tests', (accounts) => {
 
   it('adds a validator as worker, which is not permitted', async () => {
     truffleAssert.reverts(
-      this.tasklist.addWorker(task_id, validator_0, {from: validator_0}),
+      this.tasklist.addWorker(task_id, validator_1, {from: validator_1}),
       "Validator cannot be worker"
     );
   });
@@ -101,26 +101,28 @@ contract('TaskList Tests', (accounts) => {
 
   it('non-worker tries to add worked hours, which is not permitted', async () => {
     truffleAssert.reverts(
-      this.tasklist.addWorkedHours(task_id, 2, {from: validator_0}),
+      this.tasklist.addWorkedHours(task_id, 2, {from: validator_1}),
       "Worker is not assigned to this task"
     )
   });
 
   it('funds task', async () => {
     const amount = web3.utils.toWei('10', "ether");
-    const balance_before = await web3.eth.getBalance(validator_0);
-    let result = await this.tasklist.fundTask(task_id, {from: validator_0, value: amount, gasPrice:0});
+    const validator_balance_before = await web3.eth.getBalance(validator_1);
+    let contract_balance_before = await this.tasklist.getContractBalance();
+    let result = await this.tasklist.fundTask(task_id, {from: validator_1, value: amount, gasPrice:0});
 
-    // check account balance
-    const balance_after = await web3.eth.getBalance(validator_0);
-    let value = Number(balance_before) - Number(balance_after);
+    // check validator account balance
+    const balance_after = await web3.eth.getBalance(validator_1);
+    let value = Number(validator_balance_before) - Number(balance_after);
     assert.equal(value, amount);
 
     // check deposited amount
-    let contract_balance = await this.tasklist.getContractBalance();
+    let contract_balance_after = await this.tasklist.getContractBalance();
+    let contract_diff = contract_balance_after - contract_balance_before;
     let task = await this.tasklist.tasks(task_id);
     let task_balance = await task.balance;
-    assert.equal(contract_balance, amount, task_balance);
+    assert.equal(contract_diff, amount, task_balance);
   });
 
   it('completes task', async () => {
@@ -132,32 +134,41 @@ contract('TaskList Tests', (accounts) => {
 
   it('validates task and mints PPCToken', async () => {
     let task = await this.tasklist.tasks(task_id);
-    await this.tasklist.addWorker(task_id, worker_2, {from: validator_1});
+
+    // add an additional worker and his worked hours
+    await this.tasklist.addWorker(task_id, worker_2, {from: validator_2});
     await this.tasklist.addWorkedHours(task_id, worker_hours_2, {from: worker_2});
 
+    // check that the tasklist contract instance has the right to mint PPCTokens
     const is_minter = await this.ppctoken.isMinter(this.tasklist.address);
     assert.isTrue(is_minter);
+
+    // compute initial balances
     const ppc_balance_before = await this.ppctoken.balanceOf(worker_1);
     const contract_balance_before = await this.tasklist.getContractBalance();
     const task_balance_before = await task.balance;
-    const payer_balance_before = await web3.eth.getBalance(validator_0);
+    const payer_balance_before = await web3.eth.getBalance(validator_1);
 
-    const suf = await this.tasklist.sufficientFunds(0);
+    const suf = await this.tasklist.sufficientFunds(task_id);
     assert.isTrue(suf);
 
-    await this.tasklist.validateTask(task_id, 100, 10, {from: validator_0});
+    // validate task from both validators
+    await this.tasklist.validateTask(task_id, 100, 10, {from: validator_1});
+    await this.tasklist.validateTask(task_id, 100, 5, {from: validator_2});
 
     task = await this.tasklist.tasks(task_id);
+    
+    // check rating values
     assert.equal(task.ppc, 100);
     assert.equal(task.state, 3);
-    assert.equal(task.Qrating, 10)
+    assert.equal(task.Qrating, 7);
 
     // check ppc_balance
     const ppc_balance_after = await this.ppctoken.balanceOf(worker_1);
     const ppc_diff = Number(ppc_balance_after) - Number(ppc_balance_before);
     assert.equal(ppc_diff, 1);
 
-    // paid amount
+    // check paid amount
     const hourly_rate = await this.tasklist.hourly_rate();
     const amount_paid = hourly_rate * (worker_hours_1 + worker_hours_2);
 
@@ -166,7 +177,7 @@ contract('TaskList Tests', (accounts) => {
     assert.equal(Number(task_balance_after), 0);
 
     // check payer balance
-    const payer_balance_after = await web3.eth.getBalance(validator_0);
+    const payer_balance_after = await web3.eth.getBalance(validator_1);
     const amount_back = payer_balance_after - payer_balance_before
     const rest = task_balance_before - amount_paid;
     assert.isTrue((rest - amount_back) / rest < 0.001);

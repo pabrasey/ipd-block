@@ -3,7 +3,8 @@ import Web3Container from '../../lib/Web3Container';
 import TaskListContract from '../../contracts/TaskList.json';
 import Layout from '../../components/layout';
 import { AddressList } from '../../components/ethereum';
-import WorkedHoursTable from './components/workedHoursTable'
+import WorkedHoursTable from './components/workedHoursTable';
+import ValidationsTable from './components/validationsTable';
 import { withRouter } from 'next/router';
 import { Heading, Box, Text, Button, Link, Field } from 'rimble-ui';
 
@@ -46,6 +47,15 @@ class ViewTask extends Component {
             worked_hours.push({ worker, hours: Number(hours) });
         }
         task.worked_hours = worked_hours;
+
+        // validations
+        let validations = []
+        for (let i = 0; i < task.validators.length; i++) {
+            let validator = task.validators[i];
+            let validation = await contract.methods.getValidation(task_id, validator).call();
+            validations.push({ validator, ppc: Number(validation.ppc), Qrating: Number(validation.Qrating) });
+        }
+        task.validations = validations;
       }
 
       this.setState({ task, task_exists, hourly_rate: Number(hourly_rate) / 10**18 });
@@ -55,9 +65,17 @@ class ViewTask extends Component {
 
     const { task_exists, task, accounts, hourly_rate } = this.state;
 
+    let update_button = '';
     let button = '';
-    let Qrating = '';
+    let validations = '';
     if(task_exists){
+        if(task.validators.includes(accounts[0]) && task.state == 1 || task.validators.includes(accounts[0]) && task.state < 3){
+          update_button =
+            <Button as="a" href={"update/".concat(task.id)} title="Update task" m={20}>
+              Update task
+            </Button>
+        }
+
         if(task.validators.includes(accounts[0]) && task.ppc_worker != 0 && task.state == 2){
             if(Number(task.balance) >= Number(task.neededFunds)){
               button = 
@@ -78,7 +96,11 @@ class ViewTask extends Component {
             </Button.Outline>
         }
         if(task.state > 2){
-            Qrating = <TaskInfo info={"Quality rating"} content={task.Qrating} />
+            validations = 
+            <div>
+              <TaskInfo info={"PPC"} content={task.ppc} />
+              <TaskInfo info={"Quality rating"} content={task.Qrating} />
+            </div>
         }
     }
 
@@ -90,15 +112,12 @@ class ViewTask extends Component {
             <TaskInfo info={"Title"} content={task.title} />
             <TaskInfo info={"State"} content={task_state[task.state]} />
             <TaskInfo info={"Description"} content={task.description} />
-            <TaskInfo info={"PPC"} content={task.ppc} />
             <TaskInfo info={"PPC from workers"} content={task.ppc_worker} />
-            {Qrating}
+            {validations}
             <TaskInfo info={"Available funds"} content={(task.balance / 10**18).toString().concat(" ether")} />
-            <TaskInfo info={"Validators"} content={<AddressList addresses={task.validators} />} />
             <WorkedHoursTable worked_hours={task.worked_hours} hourly_rate={hourly_rate} />
-            <Button as="a" href={"update/".concat(task.id)} title="Update task" m={20}>
-              Update task
-            </Button>
+            <ValidationsTable validations={task.validations} />
+            {update_button}
             {button}
         </Box>
       )
