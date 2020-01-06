@@ -20,12 +20,6 @@ contract TaskList {
 		ppctoken = PPCToken(_ppctoken_address);
 	}
 
-	struct Validation {
-		bool exists;
-		uint8 ppc;
-		uint8 Qrating;
-	}
-
 	struct Task {
 		uint id;
 		string title;
@@ -39,12 +33,24 @@ contract TaskList {
 		address payable[] validators;
 		mapping(address => Validation) validations;
 		mapping(address => bool) workers_map;
-		mapping(address => bool) acceptations;
 		address payable[] workers;
 		mapping(address => uint) worked_hours;
+		mapping(address => bool) acceptations;
+		mapping(address => Completion) completions;
 		uint balance;
 		//uint predecessor_id;
 		//uint successor_id;
+	}
+
+	struct Validation {
+		bool exists;
+		uint8 ppc;
+		uint8 Qrating;
+	}
+
+	struct Completion {
+		bool exists;
+		uint8 ppc;
 	}
 
 	mapping(uint => Task) public tasks;
@@ -187,10 +193,46 @@ contract TaskList {
 		emit taskFunded(_task_id, msg.sender, msg.value);
 	}
 
-	function completeTask(uint _task_id, uint8 _ppc) public workersOnly(_task_id, msg.sender) {
+	function completeTask(uint _task_id, uint8 _ppc) public workersOnly(_task_id, msg.sender) returns (bool) {
 		Task storage _task = tasks[_task_id];
-		_task.ppc_worker = _ppc;
-		_task.state = State.completed;
+
+		if(_task.state == State.accepted && 0 < _ppc && _ppc <= 100){
+			Completion storage _completion = _task.completions[msg.sender];
+			_completion.ppc = _ppc;
+			_completion.exists = true;
+
+			return computeCompletion(_task_id);
+		}
+		return false;
+	}
+
+	// calculates the mean ratings values from all workers
+	// completes the task if conditions are met
+	// return true if the task is completed
+	function computeCompletion(uint _task_id) internal returns (bool) {
+		Task storage _task = tasks[_task_id];
+		uint8 n = 0;
+		uint8 n_workers = uint8(_task.workers.length);
+		uint8 _ppc = 0;
+
+		for(uint8 i = 0; i < n_workers; i++){
+			address payable _worker = _task.workers[i];
+			Completion storage _completion = _task.completions[_worker];
+
+			if(_completion.exists){
+				_ppc += _completion.ppc;
+				n++;
+			}
+		}
+
+		// for the task to be completed:
+		// - each worker's approval is required
+		if(n == n_workers){
+			_task.ppc_worker = _ppc / n;
+			_task.state = State.completed;
+		}
+
+		return _task.state == State.completed;
 	}
 
 	function neededTaskFund(uint _task_id) public view returns (uint) {
@@ -222,7 +264,6 @@ contract TaskList {
 
 			return computeValidation(_task_id);
 		}
-
 		return false;
 	}
 
@@ -232,6 +273,7 @@ contract TaskList {
 
 	// calculates the mean ratings values from all validators
 	// validates the task and perform payments if conditions are met
+	// return true if the task is validated
 	function computeValidation(uint _task_id) internal returns (bool) {
 		Task storage _task = tasks[_task_id];
 		uint8 n = 0;
@@ -252,7 +294,7 @@ contract TaskList {
 
 		// for the task to be validated:
 		// - mean ppc from validators has to be greater than the workers' one
-		// - each validators' approval is required
+		// - each validator's approval is required
 		// - funds have to be sufficients
 		if(_ppc > 0 && _ppc >= _task.ppc_worker && n == n_validators && sufficientFunds(_task_id)){
 			_task.ppc = _ppc / n;

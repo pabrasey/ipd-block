@@ -139,9 +139,15 @@ contract('TaskList Tests', (accounts) => {
   });
 
   it('completes task', async () => {
+    // first worker completes the task but it is still not completed
     await this.tasklist.completeTask(task_id, 100, {from: worker_1});
     let task = await this.tasklist.tasks(task_id);
-    assert.equal(task.ppc_worker, 100);
+    assert.equal(task.state, 1);
+    
+    // as soon as the all workers have completed the task, its state changes to completed
+    await this.tasklist.completeTask(task_id, 90, {from: worker_2});
+    task = await this.tasklist.tasks(task_id);
+    assert.equal(task.ppc_worker, 95);
     assert.equal(task.state, 2);
   });
 
