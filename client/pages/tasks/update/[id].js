@@ -57,14 +57,16 @@ class UpdateTask extends Component {
     if(this.state.fund > 0){
       await contract.methods.fundTask(this.state.task_id).send({ value: this.state.fund * 10**18, from: accounts[0] });
     }
-    window.location.replace("/tasks/".concat(this.state.task_id)); 
+    window.location.replace("/tasks/".concat(this.state.task_id));
   }
 
   render () {
 
     const { task_exists, task, accounts } = this.state;
-    let fund_field = false;
+    let access = false;
+    let fund_field = '';
     let add_fields = '';
+    let work_field = '';
 
     if(task_exists){
       if(task.validators.includes(accounts[0])){ // if the connected user is a validator
@@ -102,9 +104,10 @@ class UpdateTask extends Component {
             />
           </Field>
         </div>
+        access = true;
       }
       if(task.workers.includes(accounts[0])){
-        fields =
+        work_field =
         <Field label="Add worked hours">
           <Input
             name="worked_hours"
@@ -113,17 +116,19 @@ class UpdateTask extends Component {
             onChange={this.handleChange}
           />
         </Field> 
+        access = true;
       }
     }
 
     if(this.state.task_exists){ 
-      if(fund_field != false){
+      if(access){
         return (
           <Box boxShadow={3} m={50} p={20}>
           <Heading as={"h3"} mb={2}>Update task with id {this.state.task_id}</Heading>
             <Form onSubmit={this.handleSubmit}>
               {add_fields}
               {fund_field}
+              {work_field}
               <br />
               <Button type="submit"> Update task </Button>
             </Form>

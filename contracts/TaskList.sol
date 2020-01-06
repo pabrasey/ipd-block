@@ -39,6 +39,7 @@ contract TaskList {
 		address payable[] validators;
 		mapping(address => Validation) validations;
 		mapping(address => bool) workers_map;
+		mapping(address => bool) acceptations;
 		address payable[] workers;
 		mapping(address => uint) worked_hours;
 		uint balance;
@@ -106,7 +107,7 @@ contract TaskList {
 			id: _id,
 			title: _title,
 			description: _description,
-			state: State.accepted,
+			state: State.created,
 			deadline: 0,
 			Qrating: 0,
 			ppc: 0,
@@ -148,7 +149,24 @@ contract TaskList {
 		return tasks[_task_id].workers;
 	}
 
-	// todo: implement acceptTask function
+	// accept task for worker calling the function
+	function acceptTask(uint _task_id) public workersOnly(_task_id, msg.sender) {
+		Task storage _task = tasks[_task_id];
+
+		if(_task.state == State.created){
+			_task.acceptations[msg.sender] = true;
+			bool accepted = false;
+
+			// go through every worker's acceptation
+			for(uint16 i = 0; i < _task.workers.length; i++) {
+				accepted = _task.acceptations[_task.workers[i]];
+			}
+			// accept the task if all workers have accepted it;
+			if(accepted){
+				_task.state = State.accepted;
+			}
+		}
+	}
 
 	function addWorkedHours(uint _task_id, uint _hours) public workersOnly(_task_id, msg.sender) {
 		Task storage _task = tasks[_task_id];

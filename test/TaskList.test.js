@@ -12,7 +12,7 @@ contract('TaskList Tests', (accounts) => {
   const worker_hours_1 = 2;
   const worker_hours_2 = 3;
   const worker_2 = accounts[3];
-  const task_id = 3;
+  const task_id = 4;
 
   before(async () => {
     this.ppctoken = await PPCToken.deployed()
@@ -68,6 +68,7 @@ contract('TaskList Tests', (accounts) => {
   it('adds worker from the allowed accounts', async () => {
     // validator adds new worker
     let result_1 = await this.tasklist.addWorker(task_id, worker_1, {from: validator_2});
+    await this.tasklist.addWorker(task_id, worker_2, {from: validator_2});
     truffleAssert.eventEmitted(result_1, 'workerAdded', (ev) => {
       return ev.task_id == task_id && ev.worker == worker_1;
     });
@@ -87,6 +88,18 @@ contract('TaskList Tests', (accounts) => {
       this.tasklist.addWorker(task_id, validator_1, {from: validator_1}),
       "Validator cannot be worker"
     );
+  });
+
+  it('accepts the task', async () => {
+    // first worker accepts the task but it is still not accepted
+    this.tasklist.acceptTask(task_id, {from: worker_1});
+    let task = await this.tasklist.tasks(task_id);
+    assert.equal(task.state, 0);
+
+    // as soon as the all workers have accepted the task, its state changes to accepted
+    this.tasklist.acceptTask(task_id, {from: worker_2});
+    task = await this.tasklist.tasks(task_id);
+    assert.equal(task.state, 1);
   });
 
   it('adds worked hours', async () => {
@@ -135,8 +148,7 @@ contract('TaskList Tests', (accounts) => {
   it('validates task and mints PPCToken', async () => {
     let task = await this.tasklist.tasks(task_id);
 
-    // add an additional worker and his worked hours
-    await this.tasklist.addWorker(task_id, worker_2, {from: validator_2});
+    // add worked hours to secnd worker
     await this.tasklist.addWorkedHours(task_id, worker_hours_2, {from: worker_2});
 
     // check that the tasklist contract instance has the right to mint PPCTokens

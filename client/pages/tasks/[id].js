@@ -6,7 +6,7 @@ import { AddressList } from '../../components/ethereum';
 import WorkedHoursTable from './components/workedHoursTable';
 import ValidationsTable from './components/validationsTable';
 import { withRouter } from 'next/router';
-import { Heading, Box, Text, Button, Link, Field } from 'rimble-ui';
+import { Heading, Box, Text, Form, Button } from 'rimble-ui';
 
 const task_state = { 0: 'created', 1: 'accepted', 2: 'completed', 3: 'validated' };
 
@@ -24,42 +24,49 @@ class TaskInfo extends Component {
 
 class ViewTask extends Component {
 
-    state = { contract: this.props.contract, accounts: this.props.accounts, task_id: this.props.router.query.id };
+  state = { contract: this.props.contract, accounts: this.props.accounts, task_id: this.props.router.query.id };
 
-    componentDidMount = async () => {
-      const contract = this.state.contract;
-      const hourly_rate = await contract.methods.hourly_rate().call();
-      const task_id = this.state.task_id;
+  componentDidMount = async () => {
+    const contract = this.state.contract;
+    const hourly_rate = await contract.methods.hourly_rate().call();
+    const task_id = this.state.task_id;
 
-      const task = await contract.methods.tasks(task_id).call();
-      let task_exists = task.id == this.state.task_id; // if the id do not correspond, the task does not exists
+    const task = await contract.methods.tasks(task_id).call();
+    let task_exists = task.id == this.state.task_id; // if the id do not correspond, the task does not exists
 
-      if(task_exists){      
-        task.validators = await contract.methods.getValidators(task_id).call();
-        task.workers = await contract.methods.getWorkers(task_id).call();
-        task.neededFunds = await contract.methods.neededTaskFund(task_id).call();
+    if(task_exists){      
+      task.validators = await contract.methods.getValidators(task_id).call();
+      task.workers = await contract.methods.getWorkers(task_id).call();
+      task.neededFunds = await contract.methods.neededTaskFund(task_id).call();
 
-        // worked hours
-        let worked_hours = []
-        for (let i = 0; i < task.workers.length; i++) {
-            let worker = task.workers[i];
-            let hours = await contract.methods.getWorkedHours(task_id, worker).call();
-            worked_hours.push({ worker, hours: Number(hours) });
-        }
-        task.worked_hours = worked_hours;
-
-        // validations
-        let validations = []
-        for (let i = 0; i < task.validators.length; i++) {
-            let validator = task.validators[i];
-            let validation = await contract.methods.getValidation(task_id, validator).call();
-            validations.push({ validator, ppc: Number(validation.ppc), Qrating: Number(validation.Qrating) });
-        }
-        task.validations = validations;
+      // worked hours
+      let worked_hours = []
+      for (let i = 0; i < task.workers.length; i++) {
+          let worker = task.workers[i];
+          let hours = await contract.methods.getWorkedHours(task_id, worker).call();
+          worked_hours.push({ worker, hours: Number(hours) });
       }
+      task.worked_hours = worked_hours;
 
-      this.setState({ task, task_exists, hourly_rate: Number(hourly_rate) / 10**18 });
+      // validations
+      let validations = []
+      for (let i = 0; i < task.validators.length; i++) {
+          let validator = task.validators[i];
+          let validation = await contract.methods.getValidation(task_id, validator).call();
+          validations.push({ validator, ppc: Number(validation.ppc), Qrating: Number(validation.Qrating) });
+      }
+      task.validations = validations;
     }
+
+    this.setState({ task, task_exists, hourly_rate: Number(hourly_rate) / 10**18 });
+  }
+
+  acceptTask = async (event) => {
+    event.preventDefault();
+    const { contract, accounts } = this.state;
+    await contract.methods.acceptTask(this.state.task_id).send({ from: accounts[0] });
+    window.location.reload(false);
+  }
 
   render () {
 
@@ -69,13 +76,15 @@ class ViewTask extends Component {
     let button = '';
     let validations = '';
     if(task_exists){
-        if(task.validators.includes(accounts[0]) && task.state == 1 || task.validators.includes(accounts[0]) && task.state < 3){
+        // update button
+        if(task.workers.includes(accounts[0]) && task.state == 1 || task.validators.includes(accounts[0]) && task.state < 3){
           update_button =
             <Button as="a" href={"update/".concat(task.id)} title="Update task" m={20}>
               Update task
             </Button>
         }
 
+        // validate button
         if(task.validators.includes(accounts[0]) && task.ppc_worker != 0 && task.state == 2){
             if(Number(task.balance) >= Number(task.neededFunds)){
               button = 
@@ -89,12 +98,24 @@ class ViewTask extends Component {
               </Button.Outline>
             }
         }
-        if(task.workers.includes(accounts[0]) && task.state < 2){
+        // accept task button
+        if(task.workers.includes(accounts[0])){
+          if(task.state == 0){
+            button = 
+            <Form onSubmit={this.acceptTask}>
+              <Button type="submit" title="Accept task" ml={80}>
+                  Accept task
+              </Button>
+            </Form>
+          }
+          if(task.state == 1){
             button = 
             <Button.Outline as="a" href={"complete/".concat(task.id)} title="Complete task" ml={80}>
                 Complete task
             </Button.Outline>
+          }
         }
+        // rating information
         if(task.state > 2){
             validations = 
             <div>
