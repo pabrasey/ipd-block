@@ -1,12 +1,28 @@
 var TaskList = artifacts.require("./TaskList.sol");
 var PPCToken = artifacts.require("./PPCToken.sol");
+var AddressBook = artifacts.require("./AddressBook.sol");
+var Rewards = artifacts.require("./Rewards.sol");
 
 module.exports = async function(deployer, network, accounts) {
+
+  // deploy PPCToken
   await deployer.deploy(PPCToken);
   let ppctoken = await PPCToken.deployed();
+
+  // deploy TaskList
   await deployer.deploy(TaskList, ppctoken.address);
   let tasklist = await TaskList.deployed();
   await ppctoken.addMinter(tasklist.address); // add tasklist instance as PPCtoken minter
+
+  // deploy AddressBook
+  await deployer.deploy(AddressBook, "validator 1");
+  let addressbook = await AddressBook.deployed();
+  await addressbook.addParticipant(accounts[1], "validator 2", {from: accounts[0]});
+  await addressbook.addParticipant(accounts[2], "worker 1", {from: accounts[0]});
+  await addressbook.addParticipant(accounts[3], "worker 2", {from: accounts[0]});
+
+  // deploy Rewards
+  await deployer.deploy(Rewards, ppctoken.address, addressbook.address);
 
   // create a task examples
   const validator_1 = accounts[0];

@@ -1,17 +1,15 @@
 pragma solidity ^0.5.11;
 pragma experimental ABIEncoderV2;
 
-
-import '../node_modules/@openzeppelin/contracts/payment/escrow/Escrow.sol';
-import '../node_modules/@openzeppelin/contracts/payment/PaymentSplitter.sol';
 import './PPCToken.sol';
 
 contract TaskList {
+
 	uint public task_count = 0;
 	enum State { created, accepted, completed, validated }
-	uint8[] ratings = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 	uint8 ppc_threshold = 90;
 	uint public hourly_rate = 1 ether;
+
 	// enum Difficulty { standard, advanced , expert }
 	// enum Uncertainity { clear, uncertain, unknown }
 	PPCToken private ppctoken;
@@ -42,6 +40,8 @@ contract TaskList {
 		//uint successor_id;
 	}
 
+	mapping(uint => Task) public tasks;
+
 	struct Validation {
 		bool exists;
 		uint8 ppc;
@@ -52,8 +52,6 @@ contract TaskList {
 		bool exists;
 		uint8 ppc;
 	}
-
-	mapping(uint => Task) public tasks;
 
 	event TaskCreated(
 		uint id,
@@ -190,6 +188,8 @@ contract TaskList {
 
 	function fundTask(uint _task_id) public payable {
 		// stores funds for the given task in this smart contract
+		// the code bellow is just used to keep track of how much funds are allocated to each task
+		// the actual ethers are automatically stored in the contract just by implementing this payable function
 		Task storage _task = tasks[_task_id];
 		_task.balance += msg.value;
 		emit taskFunded(_task_id, msg.sender, msg.value);
