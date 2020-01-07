@@ -130,6 +130,8 @@ contract TaskList {
 		emit TaskCreated(_id, _title, State.created, tasks[_id].validators);
 	}
 
+	// TODO: add removeTask function with approval from all validators and workers
+
 	function addValidator(uint _task_id, address payable _validator) public validatorsOnly(_task_id) {
 		require(!tasks[_task_id].workers_map[_validator], "Worker cannot be validator");
 		Task storage _task = tasks[_task_id];
