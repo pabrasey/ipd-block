@@ -3,7 +3,7 @@ import Web3Container from '../../lib/Web3Container';
 import TaskListContract from '../../contracts/TaskList.json';
 import Layout from '../../components/layout';
 import { AddressList } from '../../components/ethereum';
-import WorkedHoursTable from './components/workedHoursTable';
+import WorkersTable from './components/workersTable';
 import ValidationsTable from './components/validationsTable';
 import { withRouter } from 'next/router';
 import { Heading, Box, Text, Form, Button } from 'rimble-ui';
@@ -40,13 +40,14 @@ class ViewTask extends Component {
       task.neededFunds = await contract.methods.neededTaskFund(task_id).call();
 
       // worked hours
-      let worked_hours = []
+      let workers_info = []
       for (let i = 0; i < task.workers.length; i++) {
           let worker = task.workers[i];
           let hours = await contract.methods.getWorkedHours(task_id, worker).call();
-          worked_hours.push({ worker, hours: Number(hours) });
+          let completion = await contract.methods.getCompletion(task_id, worker).call();
+          workers_info.push({ worker, hours: Number(hours), ppc: Number(completion.ppc) });
       }
-      task.worked_hours = worked_hours;
+      task.workers_info = workers_info;
 
       // validations
       let validations = []
@@ -136,7 +137,7 @@ class ViewTask extends Component {
             <TaskInfo info={"PPC from workers"} content={task.ppc_worker} />
             {validations}
             <TaskInfo info={"Available funds"} content={(task.balance / 10**18).toString().concat(" ether")} />
-            <WorkedHoursTable worked_hours={task.worked_hours} hourly_rate={hourly_rate} />
+            <WorkersTable workers_info={task.workers_info} hourly_rate={hourly_rate} />
             <ValidationsTable validations={task.validations} />
             {update_button}
             {button}

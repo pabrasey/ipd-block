@@ -3,7 +3,7 @@ import Web3Container from '../../../lib/Web3Container';
 import TaskListContract from '../../../contracts/TaskList.json';
 import Layout from '../../../components/layout';
 import { withRouter } from 'next/router';
-import { Heading, Form, Field, Input, Button, Box } from 'rimble-ui';
+import { Heading, Form, Field, Input, Button, Box, Text } from 'rimble-ui';
 
 
 class CompleteTask extends Component {
@@ -69,20 +69,24 @@ class CompleteTask extends Component {
         }
     }
 
-    if(task_exists){ 
-        if(fields != false){
-            return (
-            <Box boxShadow={3} m={50} p={20}>
-            <Heading as={"h3"} mb={2}>Complete task with id {this.state.task_id}</Heading>
-                <Form onSubmit={this.handleSubmit}>
-                {fields}
-                <br />
-                <Button type="submit"> Complete task </Button>
-                </Form>
-            </Box>
-            )
+    if(task_exists){
+        if(task.state == 1){
+          if(fields != false){
+              return (
+              <Box boxShadow={3} m={50} p={20}>
+              <Heading as={"h3"} mb={2}>Complete task with id {this.state.task_id}</Heading>
+                  <Form onSubmit={this.handleSubmit}>
+                  {fields}
+                  <br />
+                  <Button type="submit"> Complete task </Button>
+                  </Form>
+              </Box>
+              )
+        } else {
+          return <Heading as={"h3"} m={20}>You do not have access to complete this task.</Heading>
+        }
       } else {
-        return <Heading as={"h3"} m={20}>You do not have access to complete this task.</Heading>
+        return <Heading as={"h3"} m={20}>This task is either not accepted yet or already completed.</Heading>
       }
     } else {
         return <Heading as={"h3"} m={20}>Task with id {this.state.task_id} does not exists</Heading>

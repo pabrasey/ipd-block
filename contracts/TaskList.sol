@@ -206,6 +206,10 @@ contract TaskList {
 		return false;
 	}
 
+	function getCompletion(uint _task_id, address _worker) public view returns (Completion memory) {
+		return tasks[_task_id].completions[_worker];
+	}
+
 	// calculates the mean ratings values from all workers
 	// completes the task if conditions are met
 	// return true if the task is completed
@@ -323,7 +327,7 @@ contract TaskList {
 		uint rest = _task.balance;
 		_task.balance -= rest;
 		_task.validators[0].transfer(rest); // return the rest to the validator
-		// todo: keep track of which address funded the task
+		// TODO: keep track of which address funded the task
 	}
 
 	function mintPPCTOken(uint _task_id) internal {
@@ -335,13 +339,6 @@ contract TaskList {
 				emit PPCTokenMinted(_worker, 1);
 			}
 		}
-	}
-
-	function toggleStarted(uint8 _id) public {
-		Task storage _task = tasks[_id];
-		_task.state = State.accepted;
-		// tasks[_id] = _task;
-		emit TaskState(_id, _task.state);
 	}
 
 	function getContractBalance() public view returns (uint256) {

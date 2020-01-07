@@ -37,6 +37,7 @@ module.exports = async function(deployer, network, accounts) {
   await tasklist.createTask('Third task', "This is an example task in state COMPLETED");
   await tasklist.addValidator(task_id_2, validator_2, {from: validator_1});
   await tasklist.addWorker(task_id_2, worker_1);
+  await tasklist.acceptTask(task_id_2, {from: worker_1})
   await tasklist.addWorkedHours(task_id_2, worker_hours_1, {from: worker_1});
   await tasklist.completeTask(task_id_2, 100, {from: worker_1});
   amount = web3.utils.toWei('10', "ether");
@@ -48,6 +49,7 @@ module.exports = async function(deployer, network, accounts) {
   await tasklist.createTask('Fourth task', "This is an example task in state VALIDATED");
   await tasklist.addValidator(task_id_3, validator_2, {from: validator_1});
   await tasklist.addWorker(task_id_3, worker_1);
+  await tasklist.acceptTask(task_id_3, {from: worker_1})
   await tasklist.addWorkedHours(task_id_3, worker_hours_1, {from: worker_1});
   await tasklist.completeTask(task_id_3, 100, {from: worker_1});
   amount = web3.utils.toWei('10', "ether");

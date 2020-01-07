@@ -35,7 +35,7 @@ class Tokens extends React.Component {
     render () {
         return(
             <Layout>
-                <Heading as={"h1"} textAlign={'center'}>Tokens</Heading>
+                <Heading as={"h1"} textAlign={'center'}>Coins and Tokens</Heading>
                 <BalanceTable balances = { this.state.balances } />
             </Layout>
         )
