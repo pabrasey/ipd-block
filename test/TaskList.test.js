@@ -4,7 +4,7 @@ const TaskList = artifacts.require('./TaskList.sol')
 
 const truffleAssert = require('truffle-assertions');
 
-contract('TaskList Tests', (accounts) => {
+contract('TaskList', (accounts) => {
 
   const validator_1 = accounts[0];
   const validator_2 = accounts[1];

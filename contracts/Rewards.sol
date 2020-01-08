@@ -11,8 +11,6 @@ contract Rewards{
 
     enum Token { ppc }
 
-    // TODO: implementation for different tokens
-
     address[] public validators;
     mapping(address => bool) public validators_map;
 
@@ -102,7 +100,11 @@ contract Rewards{
         for(uint i = 0; i < _participants.length; i++) {
 
             address payable _participant = _participants[i];
-            uint eth_amount = _reward.amount * ppctoken.balanceOf(_participant) * one_ether;
+            uint eth_amount = 0;
+
+            if(_reward.token == Token.ppc){
+                eth_amount = _reward.amount * ppctoken.balanceOf(_participant) * one_ether;
+            }
 
             _participant.transfer(eth_amount);
         }
