@@ -20,6 +20,7 @@ contract Rewards{
     uint one_ether = 1 ether;
 
     struct Reward {
+        uint id;
         State state;
         Token token;
         uint amount;
@@ -51,6 +52,10 @@ contract Rewards{
 		validators_map[_validator] = true;
 	}
 
+	function getValidators() public view returns (address[] memory) {
+		return validators;
+	}
+
     function fundPool() public payable {
         // ethers are automatically stored in the contract just by implementing this payable function
 	}
@@ -61,6 +66,7 @@ contract Rewards{
         uint _id = reward_count;
 
         Reward memory _reward = Reward ({
+            id: _id,
             state: State.created,
             token: _token,
             amount: _amount
@@ -89,6 +95,8 @@ contract Rewards{
             sendReward(_reward_id);
         }
     }
+
+    //TODO: check sufficient founds
 
     // sends (_amount * _token holding) reward in ether to all _token holders in the address_book
     function sendReward(uint _reward_id) internal {
