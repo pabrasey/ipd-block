@@ -5,10 +5,14 @@ import './PPCToken.sol';
 
 contract TaskList {
 
+	/*
+	------------	DATA & TYPES   ------------
+	*/
+
 	uint public task_count = 0;
 	enum State { created, accepted, completed, validated }
-	uint8 ppc_threshold = 90;
-	uint public hourly_rate = 1 ether;
+	uint8 ppc_threshold = 90; // PPC threshold for the workers to get the PPCToken
+	uint public hourly_rate = 1 ether; // the hourly rate is fixed and the same for all workers
 
 	// enum Difficulty { standard, advanced , expert }
 	// enum Uncertainity { clear, uncertain, unknown }
@@ -42,16 +46,22 @@ contract TaskList {
 
 	mapping(uint => Task) public tasks;
 
+	// represents the validation and its ratings of one validator
 	struct Validation {
 		bool exists;
 		uint8 ppc;
 		uint8 Qrating;
 	}
 
+	// represents the completion and its ratings of one worker
 	struct Completion {
 		bool exists;
 		uint8 ppc;
 	}
+
+	/*
+	------------	EVENTS    ------------
+	*/
 
 	event TaskCreated(
 		uint id,
@@ -59,19 +69,6 @@ contract TaskList {
 		State state,
 		address payable[] validators
 	);
-
-	event Test(bool is_true);
-
-	modifier validatorsOnly(uint _task_id) {
-		// checks that the sender is a validator of task
-		require(tasks[_task_id].validators_map[msg.sender], "Caller is not a validator of this task");
-		_;
-	}
-
-	modifier workersOnly(uint _task_id, address _account) {
-		require(tasks[_task_id].workers_map[_account], "Worker is not assigned to this task");
-		_;
-	}
 
 	event TaskState(
 		uint id,
@@ -105,6 +102,25 @@ contract TaskList {
 		uint amount
 	);
 
+	/*
+	------------	MODIFIERS    ------------
+	*/
+
+	modifier validatorsOnly(uint _task_id) {
+		// checks that the sender is a validator of task
+		require(tasks[_task_id].validators_map[msg.sender], "Caller is not a validator of this task");
+		_;
+	}
+
+	modifier workersOnly(uint _task_id, address _account) {
+		require(tasks[_task_id].workers_map[_account], "Worker is not assigned to this task");
+		_;
+	}
+
+	/*
+	------------	FUNCTIONS    ------------
+	*/
+
 	function createTask(string memory _title, string memory _description) public {
 		uint _id = task_count;
 		Task memory task = Task({
@@ -128,8 +144,9 @@ contract TaskList {
 		emit TaskCreated(_id, _title, State.created, tasks[_id].validators);
 	}
 
-	// TODO: add removeTask function with approval from all validators and workers
+	// TODO: add removeTask function requiring approvals from all validators and workers
 
+	// add a validator to the given task
 	function addValidator(uint _task_id, address payable _validator) public validatorsOnly(_task_id) {
 		require(!tasks[_task_id].workers_map[_validator], "Worker cannot be validator");
 		Task storage _task = tasks[_task_id];
@@ -138,10 +155,12 @@ contract TaskList {
 		emit validatorAdded(_task_id, _validator);
 	}
 
+	// returns the array of validators of the given task
 	function getValidators(uint _task_id) public view returns (address payable[] memory) {
 		return tasks[_task_id].validators;
 	}
 
+	// add a worker to the given task
 	function addWorker(uint _task_id, address payable _worker) public validatorsOnly(_task_id) {
 		require(!tasks[_task_id].validators_map[_worker], "Validator cannot be worker");
 		Task storage _task = tasks[_task_id];
@@ -151,6 +170,7 @@ contract TaskList {
 		emit workerAdded(_task_id, _worker);
 	}
 
+	// returns the array of workers of the given task
 	function getWorkers(uint _task_id) public view returns (address payable[] memory) {
 		return tasks[_task_id].workers;
 	}
@@ -174,6 +194,7 @@ contract TaskList {
 		}
 	}
 
+	// adds worked hours in the given task to the worker calling the function
 	function addWorkedHours(uint _task_id, uint _hours) public workersOnly(_task_id, msg.sender) {
 		Task storage _task = tasks[_task_id];
 		if(_task.state == State.accepted){
@@ -182,10 +203,12 @@ contract TaskList {
 		}
 	}
 
+	// returns the worked hours of the given worker in the given task
 	function getWorkedHours(uint _task_id, address _worker) public view returns (uint) {
 		return tasks[_task_id].worked_hours[_worker];
 	}
 
+	// stores funds allocated to the given task in this contract
 	function fundTask(uint _task_id) public payable {
 		// stores funds for the given task in this smart contract
 		// the code bellow is just used to keep track of how much funds are allocated to each task
@@ -195,6 +218,7 @@ contract TaskList {
 		emit taskFunded(_task_id, msg.sender, msg.value);
 	}
 
+	// completes the task for the worker calling the function
 	function completeTask(uint _task_id, uint8 _ppc) public workersOnly(_task_id, msg.sender) returns (bool) {
 		Task storage _task = tasks[_task_id];
 
@@ -208,6 +232,7 @@ contract TaskList {
 		return false;
 	}
 
+	// returns the completion ratings for the given worker
 	function getCompletion(uint _task_id, address _worker) public view returns (Completion memory) {
 		return tasks[_task_id].completions[_worker];
 	}
@@ -241,6 +266,7 @@ contract TaskList {
 		return _task.state == State.completed;
 	}
 
+	// returns the amout of fund required to pay all worked hours of the given task
 	function neededTaskFund(uint _task_id) public view returns (uint) {
 		Task storage _task = tasks[_task_id];
 		uint amount;
@@ -251,6 +277,7 @@ contract TaskList {
 		return amount * hourly_rate;
 	}
 
+	// return true if the funds allocated to the task and saved in the contract are sufficient to pay the workers
 	function sufficientFunds(uint _task_id) public view returns (bool) {
 		Task memory _task = tasks[_task_id];
 		return _task.balance >= neededTaskFund(_task_id);
@@ -273,6 +300,7 @@ contract TaskList {
 		return false;
 	}
 
+	// returns the validation ratings for the given validator
 	function getValidation(uint _task_id, address _validator) public view returns (Validation memory) {
 		return tasks[_task_id].validations[_validator];
 	}
@@ -301,7 +329,7 @@ contract TaskList {
 		// for the task to be validated:
 		// - mean ppc from validators has to be greater than the workers' one
 		// - each validator's approval is required
-		// - funds have to be sufficients
+		// - funds have to be sufficient
 		if(_ppc > 0 && _ppc >= _task.ppc_worker && n == n_validators && sufficientFunds(_task_id)){
 			_task.ppc = _ppc / n;
 
@@ -318,6 +346,7 @@ contract TaskList {
 		return _task.state == State.validated;
 	}
 
+	// send payments to the workers and return the rest to the payers
 	function releasePayment(uint _task_id) internal {
 		Task storage _task = tasks[_task_id];
 		for(uint16 i = 0; i < _task.workers.length; i++) {
@@ -328,10 +357,11 @@ contract TaskList {
 		}
 		uint rest = _task.balance;
 		_task.balance -= rest;
-		_task.validators[0].transfer(rest); // return the rest to the validator
-		// TODO: keep track of which address funded the task
+		_task.validators[0].transfer(rest); // return the rest to the validator[0]
+		// TODO: keep track of which address funded which amount in a mapping
 	}
 
+	// mints PPCTokens for every worker of the task if the ppc threshold is respected
 	function mintPPCTOken(uint _task_id) internal {
 		Task memory _task = tasks[_task_id];
 		if(_task.ppc >= ppc_threshold) {
@@ -343,6 +373,7 @@ contract TaskList {
 		}
 	}
 
+	// returns the amount of ether stored in this contract
 	function getContractBalance() public view returns (uint256) {
         return address(this).balance;
     }

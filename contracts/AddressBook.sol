@@ -2,6 +2,11 @@ pragma solidity ^0.5.11;
 
 contract AddressBook {
 
+    /*
+        This contract is the address book for the project
+        linking addresses to names of individuals, teams or companies
+    */
+
     uint public participant_count = 0;
 
     address payable[] public participants;

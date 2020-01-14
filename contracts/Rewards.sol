@@ -5,6 +5,10 @@ import './AddressBook.sol';
 
 contract Rewards{
 
+	/*
+	------------	DATA & TYPES   ------------
+	*/
+
     uint public reward_count = 0;
 
     enum State { created, validated }
@@ -38,12 +42,21 @@ contract Rewards{
 		validators_map[msg.sender] = true;
 	}
 
+	/*
+	------------	MODIFIERS    ------------
+	*/
+
     modifier validatorsOnly() {
 		// checks that the sender is a validator of task
 		require(validators_map[msg.sender], "Caller is not a reward validator");
 		_;
 	}
 
+	/*
+	------------	FUNCTIONS    ------------
+	*/
+
+    // adds a validator
     function addValidator(address _validator) public validatorsOnly {
 
         require(!validators_map[_validator], "This address is already a validator");
@@ -52,10 +65,12 @@ contract Rewards{
 		validators_map[_validator] = true;
 	}
 
+    // get the array of validators
 	function getValidators() public view returns (address[] memory) {
 		return validators;
 	}
 
+    // stores ether in this contract (the reward pool)
     function fundPool() public payable {
         // ethers are automatically stored in the contract just by implementing this payable function
 	}
@@ -76,6 +91,7 @@ contract Rewards{
         reward_count++;
     }
 
+    // validates the given reward from the validator calling the function
     function validateReward(uint _reward_id) public validatorsOnly {
 
         require(rewards[_reward_id].state == State.created, "This reward does not exists or is already validated");
@@ -118,6 +134,7 @@ contract Rewards{
         }
     }
 
+    // returns the amount of ether stored in this contract
     function getContractBalance() public view returns (uint256) {
         return address(this).balance;
     }
