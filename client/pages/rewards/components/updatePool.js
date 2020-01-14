@@ -10,7 +10,7 @@ import { Heading, Form, Field, Select, Input, Button, Box } from 'rimble-ui';
 class UpdatePool extends Component {
 
   state = { reward_contract: this.props.reward_contract, validators: [], 
-    accounts: [], book_options: [], val_field: '', new_validator: '' };
+    accounts: [], book_options: [], new_validator: '' };
 
   constructor(props) {
     super(props);
@@ -28,34 +28,20 @@ class UpdatePool extends Component {
 
     let book_options = [{ value: false, label: "None"}];
     const participants = await addressbook.methods.getParticipants().call();
-    
-    let val_field = '';
 
     if(validators.includes(accounts[0])){
 
+      // create select list of participants
       for (let i = 0; i < participants.length; i++) {
         const address = participants[i];
         let name = await addressbook.methods.book(address).call();
-        book_options.push({ value: address, label: name });
+        book_options.push({ value: address, label: name.concat(' (', address, ')') });
       }
-
-      val_field =
-      <div>
-        <Field label="Add validator:">
-          <Select
-              required={false}
-              onChange = { this.handleChange }
-              value = { this.state.new_validator }
-              name = "new_validator"
-              options={book_options}
-          />
-        </Field>
-        <br />
-      </div>
     }
 
-    this.setState({ accounts, validators, book_options, val_field });
+    this.setState({ accounts, validators, book_options });
   }
+
 
   handleChange(event) {
     const target = event.target;
@@ -73,7 +59,7 @@ class UpdatePool extends Component {
     if(this.state.fund > 0){
       await reward_contract.methods.fundPool().send({ value: this.state.fund * 10**18, from: accounts[0] });
     }
-    if(this.state.val_field != '' && this.state.new_validator.length == 42){
+    if(this.state.book_options.length > 1 && this.state.new_validator.length == 42){
       await reward_contract.methods.addValidator(this.state.new_validator).send({ from: accounts[0] });
     }
     window.location.reload(false);
@@ -81,7 +67,25 @@ class UpdatePool extends Component {
 
   render () {
 
-      return (
+    let val_field = '';
+
+    if(this.state.book_options.length > 1){
+      val_field =
+      <div>
+        <Field label="Add validator:">
+          <Select
+              required={false}
+              onChange = { this.handleChange }
+              value = { this.state.new_validator }
+              name = "new_validator"
+              options={this.state.book_options}
+          />
+        </Field>
+        <br />
+      </div>
+    }
+
+    return (
       <Box boxShadow={3} m={50} p={20}>
       <Heading as={"h3"} mb={2}>Update pool</Heading>
           <Form onSubmit={this.handleSubmit}>
@@ -94,11 +98,11 @@ class UpdatePool extends Component {
                   />
               </Field>
               <br />
-              {this.state.val_field}
-              <Button type="submit"> Fund pool </Button>
+              {val_field}
+              <Button type="submit"> Update pool </Button>
           </Form>
       </Box>
-      )
+    )
   }
 }
 

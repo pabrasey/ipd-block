@@ -46,16 +46,21 @@ module.exports = async function(deployer, network, accounts) {
   await tasklist.addWorker(task_id_1, worker_2);
   await tasklist.acceptTask(task_id_1, {from: worker_1})
   await tasklist.acceptTask(task_id_1, {from: worker_2})
-  await tasklist.addWorkedHours(task_id_1, worker_hours_1, {from: worker_1});
+  await tasklist.addWorkedHours(task_id_1, worker_hours_2, {from: worker_2});
+  await tasklist.completeTask(task_id_1, 100, {from: worker_2});
 
   // completed task
   const task_id_2 = 2;
   await tasklist.createTask('Third task', "This is an example task in state COMPLETED");
   await tasklist.addValidator(task_id_2, validator_2, {from: validator_1});
   await tasklist.addWorker(task_id_2, worker_1);
+  await tasklist.addWorker(task_id_2, worker_2);
   await tasklist.acceptTask(task_id_2, {from: worker_1})
+  await tasklist.acceptTask(task_id_2, {from: worker_2})
   await tasklist.addWorkedHours(task_id_2, worker_hours_1, {from: worker_1});
+  await tasklist.addWorkedHours(task_id_2, worker_hours_2, {from: worker_2});
   await tasklist.completeTask(task_id_2, 100, {from: worker_1});
+  await tasklist.completeTask(task_id_2, 100, {from: worker_2});
   amount = web3.utils.toWei('10', "ether");
   await tasklist.fundTask(task_id_2, {from: validator_1, value: amount, gasPrice:0});
   await tasklist.validateTask(task_id_2, 100, 5, {from: validator_2});
@@ -65,9 +70,13 @@ module.exports = async function(deployer, network, accounts) {
   await tasklist.createTask('Fourth task', "This is an example task in state VALIDATED");
   await tasklist.addValidator(task_id_3, validator_2, {from: validator_1});
   await tasklist.addWorker(task_id_3, worker_1);
+  await tasklist.addWorker(task_id_3, worker_2);
   await tasklist.acceptTask(task_id_3, {from: worker_1})
+  await tasklist.acceptTask(task_id_3, {from: worker_2})
   await tasklist.addWorkedHours(task_id_3, worker_hours_1, {from: worker_1});
+  await tasklist.addWorkedHours(task_id_3, worker_hours_2, {from: worker_2});
   await tasklist.completeTask(task_id_3, 100, {from: worker_1});
+  await tasklist.completeTask(task_id_3, 90, {from: worker_2});
   amount = web3.utils.toWei('10', "ether");
   await tasklist.fundTask(task_id_3, {from: validator_1, value: amount, gasPrice:0});
   await tasklist.validateTask(task_id_3, 100, 10, {from: validator_1});
