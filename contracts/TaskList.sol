@@ -11,6 +11,8 @@ contract TaskList {
 
 	uint public task_count = 0;
 	enum State { created, accepted, completed, validated }
+	// TODO: add an "initiated" state in which validators can add validators and
+	//       workers before workers can accept the task
 	uint8 ppc_threshold = 90; // PPC threshold for the workers to get the PPCToken
 	uint public hourly_rate = 1 ether; // the hourly rate is fixed and the same for all workers
 

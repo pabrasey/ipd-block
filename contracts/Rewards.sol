@@ -76,6 +76,7 @@ contract Rewards{
 	}
 
     // proposes to give a (_amount * _token holding) reward in _coin to all _token holders in the address_book
+    // TODO: restrict access to project participants
     function createReward(Token _token, uint _amount) public {
 
         uint _id = reward_count;
